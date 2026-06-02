@@ -2,27 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 2) Base layer for your fonts */
 @layer base {
-  /* Nav bar links */
-  nav,
-  nav a {
-    font-family: 'NewAcademy', sans-serif;
-  }
-
-  /* Headings */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'JoystixMonoSpace', monospace;
-  }
-
-  /* Body & other text */
-  body,
-  p,
-  li,
-  input,
-  textarea,
-  button {
-    font-family: 'PoppinsRegular', sans-serif;
+  *, body, h1, h2, h3, h4, h5, h6, p, li, input, textarea, button, nav, nav a {
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
 }
 
