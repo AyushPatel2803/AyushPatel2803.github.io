@@ -553,7 +553,7 @@ export default function App() {
             </motion.p>
             <form action="https://formsubmit.co/imayushpatel28@gmail.com" method="POST" className="grid gap-4">
               <input type="hidden" name="_captcha" value="false" />
-              <input type="hidden" name="_next" value="https://ayushpatel2803.github.io/My_Portfolio/#home" />
+              <input type="hidden" name="_next" value="https://ayushpatel2803.github.io/#home" />
               <input type="text" name="Name" placeholder="Your Name"
                 className="bg-white/5 border border-white/10 focus:border-blue-500 text-white rounded-lg p-3 w-full placeholder:text-white/30 outline-none transition-colors" required />
               <input type="email" name="Email" placeholder="Your Email"
