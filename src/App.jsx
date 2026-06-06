@@ -266,16 +266,10 @@ function ProjectsShowcase({ projects }) {
           {projects.map((project, i) => (
             <div
               key={project.title}
-              className="flex-shrink-0 flex items-center px-20"
+              className="flex-shrink-0 flex items-center px-20 justify-between"
               style={{ width: "100vw", height: "100%" }}
             >
-              <div className="text-white max-w-4xl">
-                <div
-                  className="font-extrabold leading-none select-none"
-                  style={{ fontSize: "clamp(7rem, 18vw, 15rem)", color: "rgba(255,255,255,0.04)", marginBottom: "-3rem" }}
-                >
-                  0{i + 1}
-                </div>
+              <div className="text-white" style={{ maxWidth: "55vw" }}>
                 <h2
                   className="font-extrabold tracking-tight leading-none mb-6 relative z-10"
                   style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
@@ -313,6 +307,13 @@ function ProjectsShowcase({ projects }) {
                   </span>
                 </a>
               </div>
+              {/* Right side — large decorative number */}
+              <div
+                className="font-extrabold leading-none select-none flex-shrink-0"
+                style={{ fontSize: "clamp(10rem, 22vw, 20rem)", color: "rgba(255,255,255,0.03)", marginRight: "4rem" }}
+              >
+                0{i + 1}
+              </div>
             </div>
           ))}
         </motion.div>
@@ -343,10 +344,177 @@ function ProjectsShowcase({ projects }) {
   );
 }
 
+// ── CAPABILITIES SECTION ──────────────────────────────────────
+function CapabilitiesSection({ scrollToProject, isMobile }) {
+  const [activeIdx, setActiveIdx] = useState(-1);
+
+  const capabilities = [
+    {
+      label: "Interfaces",
+      bigWord: "Frontend.",
+      title: "Build interfaces that move",
+      desc: "React, Tailwind, Framer Motion — animated, responsive web experiences.",
+      projectName: "Enchanted Wars",
+      projectIdx: 1,
+    },
+    {
+      label: "Models",
+      bigWord: "Machine\nLearning.",
+      title: "Train models that fit anywhere",
+      desc: "PyTorch, LoRA/QLoRA, Hugging Face — 7B-param LLMs on a 6 GB GPU, fully offline.",
+      projectName: "PyExplain",
+      projectIdx: 0,
+    },
+    {
+      label: "Systems",
+      bigWord: "Full-Stack.",
+      title: "Design systems that scale",
+      desc: "Java, UML, full-stack architecture — software that makes sense from day one.",
+      projectName: "SplitSmart",
+      projectIdx: 3,
+    },
+  ];
+
+  return (
+    <section id="skills" className="py-24 px-16 md:px-24">
+      <ParallaxSection>
+        <div>
+          <motion.span
+            className="text-blue-500 text-xs font-mono tracking-widest uppercase mb-10 block"
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            viewport={{ once: false, margin: "-60px" }}
+          >What I build</motion.span>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: isMobile ? "2rem" : "4rem",
+            alignItems: "start",
+          }}>
+            {/* Left — big words */}
+            {!isMobile && (
+              <div style={{ paddingTop: "4px" }}>
+                {capabilities.map((cap, i) => (
+                  <span
+                    key={i}
+                    onMouseEnter={() => setActiveIdx(i)}
+                    onMouseLeave={() => setActiveIdx(-1)}
+                    style={{
+                      display: "block",
+                      fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)",
+                      fontWeight: 700,
+                      lineHeight: 1.15,
+                      letterSpacing: "-0.025em",
+                      color: activeIdx === i ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.15)",
+                      transition: "color 0.25s ease",
+                      marginBottom: "0.3em",
+                      whiteSpace: "pre-line",
+                      cursor: "default",
+                    }}
+                  >
+                    {cap.bigWord}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Right — rows */}
+            <div>
+              {capabilities.map((cap, i) => (
+                <motion.div
+                  key={i}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  onMouseLeave={() => setActiveIdx(-1)}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  viewport={{ once: false, margin: "-60px" }}
+                  style={{
+                    padding: "22px 0",
+                    borderTop: "0.5px solid rgba(255,255,255,0.06)",
+                    borderBottom: i === capabilities.length - 1 ? "0.5px solid rgba(255,255,255,0.06)" : "none",
+                    paddingLeft: activeIdx === i ? "16px" : "0",
+                    transition: "padding-left 0.3s cubic-bezier(0.22,1,0.36,1)",
+                    position: "relative",
+                    cursor: "default",
+                  }}
+                >
+                  {/* Blue left bar */}
+                  <div style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0, width: 2,
+                    background: "#3b82f6",
+                    transform: activeIdx === i ? "scaleY(1)" : "scaleY(0)",
+                    transformOrigin: "top",
+                    transition: "transform 0.3s cubic-bezier(0.22,1,0.36,1)",
+                    borderRadius: 2,
+                  }} />
+
+                  {/* Label */}
+                  <p style={{
+                    fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+                    color: activeIdx === i ? "#3b82f6" : "rgba(255,255,255,0.18)",
+                    marginBottom: 6, transition: "color 0.25s", fontWeight: 500,
+                  }}>{cap.label}</p>
+
+                  {/* Title */}
+                  <span style={{
+                    fontSize: 15, fontWeight: 600, display: "block",
+                    color: activeIdx === i ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.45)",
+                    transition: "color 0.25s",
+                    marginBottom: activeIdx === i ? 6 : 0,
+                  }}>{cap.title}</span>
+
+                  {/* Description — expands on hover */}
+                  <p style={{
+                    fontSize: 12, lineHeight: 1.65,
+                    color: "rgba(255,255,255,0.38)",
+                    maxHeight: activeIdx === i ? "80px" : "0",
+                    opacity: activeIdx === i ? 1 : 0,
+                    overflow: "hidden",
+                    marginBottom: activeIdx === i ? 12 : 0,
+                    transition: "max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s, margin-bottom 0.3s",
+                  }}>{cap.desc}</p>
+
+                  {/* See project button — appears on hover */}
+                  <button
+                    onClick={() => scrollToProject(cap.projectIdx)}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 7,
+                      fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
+                      color: "#3b82f6",
+                      background: "transparent",
+                      border: "0.5px solid rgba(59,130,246,0.35)",
+                      borderRadius: 100,
+                      padding: "6px 14px",
+                      cursor: "pointer",
+                      maxHeight: activeIdx === i ? "40px" : "0",
+                      opacity: activeIdx === i ? 1 : 0,
+                      overflow: "hidden",
+                      transition: "max-height 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s, background 0.2s, border-color 0.2s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(59,130,246,0.1)"; e.currentTarget.style.borderColor = "#3b82f6"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(59,130,246,0.35)"; }}
+                  >
+                    See {cap.projectName} <span style={{ transition: "transform 0.2s", display: "inline-block" }}>→</span>
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ParallaxSection>
+    </section>
+  );
+}
+
 // ── MAIN APP ───────────────────────────────────────────────────
 export default function App() {
   const [loading, setLoading] = useState(true);
   const heroContentRef = useRef(null);
+  const lenisRef = useRef(null);
+  const isMobile = useIsMobile();
 
   // Lenis smooth scroll + hero parallax updated every frame
   useEffect(() => {
@@ -355,6 +523,7 @@ export default function App() {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
     let raf;
     function tick(time) {
       lenis.raf(time);
@@ -371,7 +540,41 @@ export default function App() {
     return () => { cancelAnimationFrame(raf); lenis.destroy(); };
   }, []);
 
+  function scrollToProject(index) {
+    const section = document.getElementById("projects");
+    if (!section) return;
+
+    if (isMobile) {
+      // On mobile, projects are vertical — scroll to the section
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(section, { offset: -80, duration: 1.4 });
+      }
+      return;
+    }
+
+    // Desktop: calculate exact scroll position for the horizontal track
+    const sectionTop = section.offsetTop;
+    const sectionHeight = section.offsetHeight;
+    const windowHeight = window.innerHeight;
+    const progress = projects.length > 1 ? index / (projects.length - 1) : 0;
+    const targetScrollY = sectionTop + progress * (sectionHeight - windowHeight);
+
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(targetScrollY, {
+        duration: 1.6,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
+    }
+  }
+
+  // projects defined here so scrollToProject can reference it
   const projects = [
+    {
+      title: "PyExplain",
+      desc: "Fine-tuned Qwen2.5-Coder with LoRA/QLoRA and 4-bit quantization to run a 7B model on a 6 GB GPU — full data→train→inference pipeline, runs fully offline.",
+      link: "https://github.com/AyushPatel2803/PyExplain",
+      tags: ["Python", "PyTorch", "Hugging Face", "LoRA/QLoRA", "LLMs"],
+    },
     {
       title: "Enchanted Wars",
       desc: "React frontend for a 1v1 card game — Find Match, Local Game, responsive design, UI animations.",
@@ -497,35 +700,8 @@ export default function App() {
           </ParallaxSection>
         </section>
 
-        {/* SKILLS */}
-        <section id="skills" className="py-24 px-6">
-          <ParallaxSection>
-          <div className="max-w-5xl mx-auto">
-            <motion.span
-              className="text-blue-500 text-xs font-mono tracking-widest uppercase mb-4 block text-center"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              viewport={{ once: false, margin: "-60px" }}
-            >What I know</motion.span>
-            <WordReveal text="Skills" className="font-extrabold mb-12 text-white tracking-tight text-center" style={{ fontSize: "clamp(3rem, 6vw, 5rem)" }} />
-            <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {["JavaScript","React","Python","Tailwind CSS","Framer Motion","UML Modeling","Git & GitHub","OpenCV","Matplotlib"].map((skill, i) => (
-                <motion.li
-                  key={skill}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                  viewport={{ once: false, margin: "-60px" }}
-                  className="bg-white/5 border border-white/10 hover:border-blue-500/50 text-white rounded-lg p-4 text-center font-medium hover:bg-white/10 transition-all text-sm"
-                >
-                  {skill}
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-          </ParallaxSection>
-        </section>
+        {/* SKILLS / CAPABILITIES */}
+        <CapabilitiesSection scrollToProject={scrollToProject} isMobile={isMobile} />
 
         {/* PROJECTS — horizontal scroll showcase */}
         <ProjectsShowcase projects={projects} />
