@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useInView, useMotionValue } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useInView, useMotionValue, useSpring } from "framer-motion";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import ParticlesBackground from "./ParticlesBackground";
 import { SiGooglecolab } from "react-icons/si";
@@ -16,73 +16,136 @@ function useIsMobile() {
   return isMobile;
 }
 
-// ── CUSTOM CURSOR (COMET) ──────────────────────────────────────
+// ── SCRAMBLE HERO TEXT ─────────────────────────────────────────
+function ScrambleHero({ trigger }) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
+  const [display1, setDisplay1] = useState('Ayush');
+  const [display2, setDisplay2] = useState('Patel');
+  const running = useRef(false);
+
+  useEffect(() => {
+    if (!trigger || running.current) return;
+    running.current = true;
+
+    function scramble(target, setter, onDone) {
+      let iter = 0;
+      const total = target.length * 7;
+      const iv = setInterval(() => {
+        setter(
+          target.split('').map((c, i) =>
+            i < Math.floor(iter / 7) ? c : chars[Math.floor(Math.random() * chars.length)]
+          ).join('')
+        );
+        if (iter >= total) {
+          setter(target);
+          clearInterval(iv);
+          if (onDone) onDone();
+        }
+        iter++;
+      }, 38);
+    }
+
+    const t = setTimeout(() => {
+      scramble('Ayush', setDisplay1);
+      scramble('Patel', setDisplay2, () => { running.current = false; });
+    }, 200);
+
+    return () => clearTimeout(t);
+  }, [trigger]);
+
+  return (
+    <>
+      {display1} <span className="text-blue-500">{display2}</span>
+    </>
+  );
+}
+
+// ── CUSTOM CURSOR (INVERT BLEND) ──────────────────────────────
 function CustomCursor() {
   const isMobile = useIsMobile();
-  const headRef = useRef(null);
-  const trailRefs = useRef([]);
+  const blobRef = useRef(null);
+  const dotRef = useRef(null);
   const mouse = useRef({ x: -200, y: -200 });
-  const trail = useRef(Array.from({ length: 12 }, () => ({ x: -200, y: -200 })));
+  const smoothPos = useRef({ x: -200, y: -200 });
+  const targetSize = useRef(44);
+  const currentSize = useRef(44);
   const rafRef = useRef(null);
 
   useEffect(() => {
     if (isMobile) return;
-    const onMove = (e) => { mouse.current = { x: e.clientX, y: e.clientY }; };
+
+    const onMove = (e) => {
+      mouse.current = { x: e.clientX, y: e.clientY };
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const interactive = el && el.closest("a, button, [role='button'], input, textarea, select");
+      targetSize.current = interactive ? 64 : 44;
+    };
+
+    const onDown = () => { targetSize.current = 32; };
+    const onUp = () => {
+      const el = document.elementFromPoint(mouse.current.x, mouse.current.y);
+      const interactive = el && el.closest("a, button, [role='button'], input, textarea, select");
+      targetSize.current = interactive ? 64 : 44;
+    };
+
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
 
     function animate() {
-      const mx = mouse.current.x, my = mouse.current.y;
-      if (headRef.current) {
-        headRef.current.style.transform = `translate(${mx - 4}px, ${my - 4}px)`;
+      smoothPos.current.x += (mouse.current.x - smoothPos.current.x) * 0.11;
+      smoothPos.current.y += (mouse.current.y - smoothPos.current.y) * 0.11;
+      currentSize.current += (targetSize.current - currentSize.current) * 0.1;
+
+      const s = currentSize.current;
+      if (blobRef.current) {
+        blobRef.current.style.transform = `translate(${smoothPos.current.x - s / 2}px, ${smoothPos.current.y - s / 2}px)`;
+        blobRef.current.style.width = s + "px";
+        blobRef.current.style.height = s + "px";
       }
-      let px = mx, py = my;
-      trail.current.forEach((t, i) => {
-        t.x += (px - t.x) * (0.28 - i * 0.016);
-        t.y += (py - t.y) * (0.28 - i * 0.016);
-        if (trailRefs.current[i]) {
-          trailRefs.current[i].style.transform = `translate(${t.x - (4 - i * 0.2)}px, ${t.y - (4 - i * 0.2)}px)`;
-          trailRefs.current[i].style.opacity = String(Math.max(0, 0.7 - i * 0.055));
-        }
-        px = t.x; py = t.y;
-      });
+      if (dotRef.current) {
+        dotRef.current.style.transform = `translate(${mouse.current.x - 3}px, ${mouse.current.y - 3}px)`;
+      }
       rafRef.current = requestAnimationFrame(animate);
     }
     rafRef.current = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
       cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [isMobile]);
 
   if (isMobile) return null;
 
   return (
     <>
-      {/* Comet head */}
+      {/* Invert blob — lags behind, mix-blend-mode inverts content underneath */}
       <div
-        ref={headRef}
-        className="fixed top-0 left-0 pointer-events-none z-[9999] rounded-full"
-        style={{ width: 14, height: 14, background: "#3b82f6", border: "2px solid #fff", boxShadow: "0 0 10px #3b82f6, 0 0 24px rgba(59,130,246,0.8)", willChange: "transform" }}
+        ref={blobRef}
+        className="fixed top-0 left-0 pointer-events-none rounded-full"
+        style={{
+          width: 44, height: 44,
+          background: "#ffffff",
+          mixBlendMode: "difference",
+          zIndex: 9998,
+          willChange: "transform, width, height",
+        }}
       />
-      {/* Comet tail */}
-      {Array.from({ length: 12 }, (_, i) => {
-        const size = Math.max(3, 12 - i * 0.8);
-        return (
-          <div
-            key={i}
-            ref={el => trailRefs.current[i] = el}
-            className="fixed top-0 left-0 pointer-events-none rounded-full"
-            style={{
-              width: size, height: size,
-              background: "#3b82f6",
-              zIndex: 9998 - i,
-              willChange: "transform",
-              opacity: 0,
-            }}
-          />
-        );
-      })}
+      {/* Dot — snaps instantly to exact cursor position */}
+      <div
+        ref={dotRef}
+        className="fixed top-0 left-0 pointer-events-none rounded-full"
+        style={{
+          width: 6, height: 6,
+          background: "#ffffff",
+          mixBlendMode: "difference",
+          zIndex: 9999,
+          willChange: "transform",
+        }}
+      />
     </>
   );
 }
@@ -128,28 +191,24 @@ function Preloader({ onDone }) {
   );
 }
 
-// ── WORD REVEAL ────────────────────────────────────────────────
+// ── WORD REVEAL (blur + scale) ─────────────────────────────────
 function WordReveal({ text, className, style }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: false, margin: "-60px" });
-  const words = text.split(" ");
   return (
-    <h2 ref={ref} className={className} style={style}>
-      {words.map((word, i) => (
-        <span
-          key={i}
-          style={{ overflow: "hidden", display: "inline-block", marginRight: "0.28em", verticalAlign: "bottom" }}
-        >
-          <motion.span
-            style={{ display: "inline-block" }}
-            animate={isInView ? { y: 0, opacity: 1 } : { y: "110%", opacity: 0 }}
-            transition={{ duration: 0.65, delay: i * 0.12, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {word}
-          </motion.span>
-        </span>
-      ))}
-    </h2>
+    <motion.h2
+      ref={ref}
+      className={className}
+      style={style}
+      animate={
+        isInView
+          ? { opacity: 1, filter: "blur(0px)", scale: 1, y: 0 }
+          : { opacity: 0, filter: "blur(14px)", scale: 1.05, y: 6 }
+      }
+      transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {text}
+    </motion.h2>
   );
 }
 
@@ -175,6 +234,41 @@ function ParallaxSection({ children, strength = 80 }) {
   }, [strength, isMobile]);
 
   return <div ref={ref}>{children}</div>;
+}
+
+// ── MAGNETIC BUTTON WRAPPER ────────────────────────────────────
+function MagneticButton({ children, style, className }) {
+  const ref = useRef(null);
+  const xVal = useMotionValue(0);
+  const yVal = useMotionValue(0);
+  const x = useSpring(xVal, { stiffness: 400, damping: 28 });
+  const y = useSpring(yVal, { stiffness: 400, damping: 28 });
+
+  function onMouseMove(e) {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    xVal.set(dx * 0.38);
+    yVal.set(dy * 0.38);
+  }
+
+  function onMouseLeave() {
+    xVal.set(0);
+    yVal.set(0);
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ x, y, display: "inline-block", ...style }}
+      className={className}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+    >
+      {children}
+    </motion.div>
+  );
 }
 
 // ── HORIZONTAL PROJECTS SHOWCASE ───────────────────────────────
@@ -234,11 +328,13 @@ function ProjectsShowcase({ projects }) {
                     style={{ background: "rgba(59,130,246,0.08)" }}>{tag}</span>
                 ))}
               </div>
-              <a href={project.link} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 border border-blue-500/60 text-blue-400 px-6 py-3 rounded-full text-sm font-medium hover:bg-blue-500 hover:text-white transition-all duration-300">
-                {project.link.includes("colab") ? <SiGooglecolab size={14} /> : <FaGithub size={14} />}
-                {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
-              </a>
+              <MagneticButton>
+                <a href={project.link} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 border border-blue-500/60 text-blue-400 px-6 py-3 rounded-full text-sm font-medium hover:bg-blue-500 hover:text-white transition-all duration-300">
+                  {project.link.includes("colab") ? <SiGooglecolab size={14} /> : <FaGithub size={14} />}
+                  {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
+                </a>
+              </MagneticButton>
             </motion.div>
           ))}
         </div>
@@ -290,22 +386,24 @@ function ProjectsShowcase({ projects }) {
                     </span>
                   ))}
                 </div>
-                <a
-                  href={project.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="proj-btn inline-flex items-center gap-3 border border-blue-500/60 text-blue-400 px-8 py-4 rounded-full font-medium text-sm tracking-wide"
-                >
-                  {project.link.includes("colab") ? <SiGooglecolab size={16} /> : <FaGithub size={16} />}
-                  <span className="proj-btn-text" style={{ display: "flex", flexDirection: "column", height: "1.2em", overflow: "hidden" }}>
-                    <span style={{ transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
-                      {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
+                <MagneticButton>
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="proj-btn inline-flex items-center gap-3 border border-blue-500/60 text-blue-400 px-8 py-4 rounded-full font-medium text-sm tracking-wide"
+                  >
+                    {project.link.includes("colab") ? <SiGooglecolab size={16} /> : <FaGithub size={16} />}
+                    <span className="proj-btn-text" style={{ display: "flex", flexDirection: "column", height: "1.2em", overflow: "hidden" }}>
+                      <span style={{ transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
+                        {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
+                      </span>
+                      <span style={{ transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
+                        {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
+                      </span>
                     </span>
-                    <span style={{ transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)" }}>
-                      {project.link.includes("colab") ? "View on Google Colab" : "View on GitHub"}
-                    </span>
-                  </span>
-                </a>
+                  </a>
+                </MagneticButton>
               </div>
               {/* Right side — large decorative number */}
               <div
@@ -513,6 +611,8 @@ function CapabilitiesSection({ scrollToProject, isMobile }) {
 export default function App() {
   const [loading, setLoading] = useState(true);
   const heroContentRef = useRef(null);
+  const heroSectionRef = useRef(null);
+  const heroInView = useInView(heroSectionRef, { once: false, margin: "-20%" });
   const lenisRef = useRef(null);
   const isMobile = useIsMobile();
 
@@ -598,7 +698,7 @@ export default function App() {
   return (
     <>
       <style>{`
-        @media (pointer: fine) { * { cursor: none !important; } }
+        @media (pointer: fine) { *, *:hover { cursor: none !important; } }
         .nav-link { color: rgba(255,255,255,0.35); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; transition: color 0.3s ease, letter-spacing 0.4s cubic-bezier(0.22,1,0.36,1); text-decoration: none; }
         .nav-list:hover .nav-link { color: rgba(59,130,246,0.25); }
         .nav-list:hover .nav-link:hover { color: #fff !important; letter-spacing: 0.18em; }
@@ -633,7 +733,7 @@ export default function App() {
         </nav>
 
         {/* HERO */}
-        <section id="home" className="h-screen flex flex-col items-center justify-center pt-16 px-4">
+        <section id="home" className="h-screen flex flex-col items-center justify-center pt-16 px-4" ref={heroSectionRef}>
           <div ref={heroContentRef} className="text-center w-full">
           <motion.div
             className="text-center"
@@ -643,12 +743,12 @@ export default function App() {
           >
             <motion.h1
               className="font-extrabold text-white leading-none tracking-tighter mb-6"
-              style={{ fontSize: "clamp(3rem, 10vw, 9rem)" }}
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: loading ? 40 : 0, opacity: loading ? 0 : 1 }}
-              transition={{ duration: 0.9, delay: 0.4 }}
+              style={{ fontSize: "clamp(3rem, 10vw, 9rem)", fontFamily: "inherit" }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: loading ? 0 : 1 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
             >
-              Ayush <span className="text-blue-500">Patel</span>
+              <ScrambleHero trigger={!loading && heroInView} />
             </motion.h1>
             <motion.p
               className="text-white/50 text-lg tracking-widest uppercase mb-8"
@@ -736,10 +836,12 @@ export default function App() {
                 className="bg-white/5 border border-white/10 focus:border-blue-500 text-white rounded-lg p-3 w-full placeholder:text-white/30 outline-none transition-colors" required />
               <textarea name="Message" rows="4" placeholder="Your Message"
                 className="bg-white/5 border border-white/10 focus:border-blue-500 text-white rounded-lg p-3 w-full placeholder:text-white/30 outline-none transition-colors" required />
-              <button type="submit"
-                className="mx-auto bg-blue-500 hover:bg-blue-600 text-white py-3 px-8 rounded-lg transition-colors font-medium tracking-wide">
-                Send Message →
-              </button>
+              <MagneticButton style={{ display: "flex", justifyContent: "center" }}>
+                <button type="submit"
+                  className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-8 rounded-lg transition-colors font-medium tracking-wide">
+                  Send Message →
+                </button>
+              </MagneticButton>
             </form>
           </div>
           </ParallaxSection>
