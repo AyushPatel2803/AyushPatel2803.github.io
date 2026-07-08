@@ -2,9 +2,9 @@
 
 ## Project
 React + Vite portfolio. Single page app.
-- **Live site**: https://ayushpatel2803.github.io/My_Portfolio/
-- **Dev server**: `npm run dev` → http://localhost:5173/
-- **Deploy**: `git add . && git commit -m "msg" && git push` then `npm run deploy`
+- **Live site**: https://ayushpatel2803.github.io/ (served from the `gh-pages` branch of the separate `AyushPatel2803.github.io` repo; source lives in `My_Portfolio`)
+- **Dev server**: `npm run dev` → http://localhost:5173/ (Vite `base: '/'`)
+- **Deploy**: `git add . && git commit -m "msg" && git push` then `npm run deploy` (script targets the user-page repo's gh-pages branch). ⚠ Demo html/mp4 files in `public/` are gitignored but MUST be moved out of `public/` before `npm run deploy` (the predeploy build copies ALL of public/ into dist) — move them back after.
 - **Main file**: `src/App.jsx` (everything lives here — components, styles, logic)
 - **Background**: `src/ParticlesBackground.jsx`
 - **Backup**: `src/App.backup.jsx` (pre-redesign restore point)
