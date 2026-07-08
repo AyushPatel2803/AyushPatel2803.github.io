@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# local demo sandboxes + recordings — never commit or ship
+.demo-hold/
+public/bg-*.html
+public/hero-liquid-glass.html
+public/video-frames.html
+public/paste.html
+public/*.mp4

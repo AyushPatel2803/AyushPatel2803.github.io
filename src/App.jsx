@@ -16,47 +16,134 @@ function useIsMobile() {
   return isMobile;
 }
 
-// ── SCRAMBLE HERO TEXT ─────────────────────────────────────────
-function ScrambleHero({ trigger }) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*';
-  const [display1, setDisplay1] = useState('Ayush');
-  const [display2, setDisplay2] = useState('Patel');
+// ── TRUE FOCUS HERO (plays once on first load, then static) ────
+function FocusHero({ trigger }) {
+  const [dim1, setDim1] = useState(false);
+  const [dim2, setDim2] = useState(false);
+  const [boxVisible, setBoxVisible] = useState(false);
+  const [boxPos, setBoxPos] = useState({ left: 0, top: 0, width: 80, height: 40 });
   const running = useRef(false);
+  const firstRun = useRef(true);
+  const wrapRef = useRef(null);
+  const ref1 = useRef(null);
+  const ref2 = useRef(null);
+
+  function getPos(wordRef) {
+    if (!wrapRef.current || !wordRef.current) return null;
+    const wr = wrapRef.current.getBoundingClientRect();
+    const vr = wordRef.current.getBoundingClientRect();
+    return { left: vr.left - wr.left, top: vr.top - wr.top, width: vr.width, height: vr.height };
+  }
 
   useEffect(() => {
-    if (!trigger || running.current) return;
+    // True Focus plays once — the first time the hero comes into view.
+    if (!trigger || running.current || !firstRun.current) return;
     running.current = true;
+    firstRun.current = false;
+    setDim1(true);
+    setDim2(true);
 
-    function scramble(target, setter, onDone) {
-      let iter = 0;
-      const total = target.length * 7;
-      const iv = setInterval(() => {
-        setter(
-          target.split('').map((c, i) =>
-            i < Math.floor(iter / 7) ? c : chars[Math.floor(Math.random() * chars.length)]
-          ).join('')
-        );
-        if (iter >= total) {
-          setter(target);
-          clearInterval(iv);
-          if (onDone) onDone();
-        }
-        iter++;
-      }, 38);
-    }
+    const t1 = setTimeout(() => {
+      const p = getPos(ref1);
+      if (p) setBoxPos(p);
+      setBoxVisible(true);
+      setDim1(false);
+    }, 800);
 
-    const t = setTimeout(() => {
-      scramble('Ayush', setDisplay1);
-      scramble('Patel', setDisplay2, () => { running.current = false; });
-    }, 200);
+    const t2 = setTimeout(() => {
+      const p = getPos(ref2);
+      if (p) setBoxPos(p);
+      setDim1(true);
+      setDim2(false);
+    }, 2400);
 
-    return () => clearTimeout(t);
+    const t3 = setTimeout(() => setBoxVisible(false), 4000);
+
+    const t4 = setTimeout(() => {
+      setDim1(false);
+      setDim2(false);
+      running.current = false;
+    }, 4500);
+
+    return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
+    };
   }, [trigger]);
 
+  const PH = 8; // horizontal padding around focus box
+  const PV = 5; // vertical padding around focus box
+
   return (
-    <>
-      {display1} <span className="text-blue-500">{display2}</span>
-    </>
+    <span ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }}>
+      {/* True Focus blue box */}
+      <span style={{
+        position: 'absolute',
+        border: '2px solid #3b82f6',
+        borderRadius: '6px',
+        boxShadow: '0 0 18px rgba(59,130,246,0.5), inset 0 0 10px rgba(59,130,246,0.08)',
+        pointerEvents: 'none',
+        left: boxPos.left - PH,
+        top: boxPos.top - PV,
+        width: boxPos.width + PH * 2,
+        height: boxPos.height + PV * 2,
+        opacity: boxVisible ? 1 : 0,
+        transition: 'left 0.7s cubic-bezier(0.4,0,0.2,1), width 0.7s cubic-bezier(0.4,0,0.2,1), top 0.7s cubic-bezier(0.4,0,0.2,1), height 0.7s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease',
+        zIndex: 2,
+      }} />
+      <span ref={ref1} style={{ opacity: dim1 ? 0.45 : 1, filter: dim1 ? 'blur(4px)' : 'blur(0px)', transition: 'opacity 0.35s ease, filter 0.35s ease', display: 'inline-block' }}>
+        Ayush
+      </span>
+      {' '}
+      <span ref={ref2} style={{ color: '#3b82f6', opacity: dim2 ? 0.45 : 1, filter: dim2 ? 'blur(4px)' : 'blur(0px)', transition: 'opacity 0.35s ease, filter 0.35s ease', display: 'inline-block' }}>
+        Patel
+      </span>
+    </span>
+  );
+}
+
+// ── TYPEWRITER ROLE ────────────────────────────────────────────
+function TypewriterRole() {
+  const roles = ['ML & LLM', 'Full Stack', 'React · Node'];
+  const [roleIdx, setRoleIdx] = useState(0);
+  const [text, setText] = useState('');
+  const [phase, setPhase] = useState('typing');
+  const [cursorOn, setCursorOn] = useState(true);
+
+  useEffect(() => {
+    const role = roles[roleIdx];
+    if (phase === 'typing') {
+      if (text.length < role.length) {
+        const t = setTimeout(() => setText(role.slice(0, text.length + 1)), 75);
+        return () => clearTimeout(t);
+      } else {
+        const t = setTimeout(() => setPhase('deleting'), 1500);
+        return () => clearTimeout(t);
+      }
+    } else {
+      if (text.length > 0) {
+        const t = setTimeout(() => setText(prev => prev.slice(0, -1)), 40);
+        return () => clearTimeout(t);
+      } else {
+        setRoleIdx(i => (i + 1) % roles.length);
+        setPhase('typing');
+      }
+    }
+  }, [text, phase, roleIdx]);
+
+  useEffect(() => {
+    const t = setInterval(() => setCursorOn(v => !v), 530);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <span style={{ color: '#ffffff', fontWeight: 500 }}>
+      {text}
+      <span style={{
+        display: 'inline-block', width: '2px', height: '0.8em',
+        background: '#ffffff', marginLeft: '2px', verticalAlign: 'middle',
+        opacity: cursorOn ? 1 : 0, transition: 'opacity 0.1s',
+      }} />
+    </span>
   );
 }
 
@@ -607,6 +694,66 @@ function CapabilitiesSection({ scrollToProject, isMobile }) {
   );
 }
 
+// ── STAGGERED MENU NAV (React Bits style — slide-in overlay) ───
+const NAV_SECTIONS = ["Home", "About", "Skills", "Projects", "Contact"];
+
+function StaggeredMenuNav({ sections }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="stagger-btn" onClick={() => setOpen(o => !o)} aria-label="Toggle menu">
+        <span>{open ? "Close" : "Menu"}</span>
+        <span style={{
+          display: "inline-block", fontSize: "1.2em", lineHeight: 1,
+          transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1)",
+          transform: open ? "rotate(45deg)" : "none",
+        }}>+</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <div className="fixed inset-0 z-30" key="stagger-overlay">
+            <motion.div
+              className="absolute inset-0"
+              style={{ background: "rgba(0,0,0,0.45)" }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => setOpen(false)}
+            />
+            <motion.div className="stagger-pre" style={{ background: "#3b82f6" }}
+              initial={{ x: "100%" }} animate={{ x: 0 }}
+              exit={{ x: "100%", transition: { delay: 0.08, duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }} />
+            <motion.div className="stagger-pre" style={{ background: "#a78bfa" }}
+              initial={{ x: "100%" }} animate={{ x: 0 }}
+              exit={{ x: "100%", transition: { delay: 0.04, duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
+              transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }} />
+            <motion.div className="stagger-panel"
+              initial={{ x: "100%" }} animate={{ x: 0 }}
+              exit={{ x: "100%", transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
+              transition={{ duration: 0.5, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}>
+              <p style={{
+                fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase",
+                color: "rgba(255,255,255,0.35)", marginBottom: "2rem",
+              }}>Navigation</p>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                {sections.map((s, i) => (
+                  <motion.li key={s}
+                    initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.35 + i * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
+                    <a href={`#${s.toLowerCase()}`} className="stagger-link" onClick={() => setOpen(false)}>
+                      {s}<sup>{String(i + 1).padStart(2, "0")}</sup>
+                    </a>
+                  </motion.li>
+                ))}
+              </ul>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 // ── MAIN APP ───────────────────────────────────────────────────
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -699,9 +846,15 @@ export default function App() {
     <>
       <style>{`
         @media (pointer: fine) { *, *:hover { cursor: none !important; } }
-        .nav-link { color: rgba(255,255,255,0.35); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; transition: color 0.3s ease, letter-spacing 0.4s cubic-bezier(0.22,1,0.36,1); text-decoration: none; }
-        .nav-list:hover .nav-link { color: rgba(59,130,246,0.25); }
-        .nav-list:hover .nav-link:hover { color: #fff !important; letter-spacing: 0.18em; }
+        .nav-logo { position: fixed; top: 18px; left: 22px; z-index: 40; width: 44px; height: 44px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; border: 1px solid rgba(255,255,255,0.1); text-decoration: none; transition: transform 0.6s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s; }
+        .nav-logo:hover { transform: rotate(360deg); box-shadow: 0 0 24px rgba(59,130,246,0.45); }
+        @media (max-width: 640px) { .nav-logo { width: 38px; height: 38px; font-size: 12px; } }
+        .stagger-btn { position: fixed; top: 18px; right: 22px; z-index: 40; display: inline-flex; gap: 8px; align-items: center; background: rgba(10,10,20,0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 9999px; padding: 11px 20px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; cursor: pointer; }
+        .stagger-pre { position: absolute; top: 0; right: 0; height: 100%; width: min(440px, 100vw); }
+        .stagger-panel { position: absolute; top: 0; right: 0; height: 100%; width: min(440px, 100vw); background: #0c0a18; border-left: 1px solid rgba(255,255,255,0.08); padding: 96px 48px; }
+        .stagger-link { font-size: clamp(2.4rem, 4.5vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; color: #fff; text-decoration: none; line-height: 1.15; display: inline-block; transition: color 0.25s, transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+        .stagger-link:hover { color: #3b82f6; transform: translateX(10px); }
+        .stagger-link sup { font-size: 0.85rem; color: #3b82f6; font-weight: 600; margin-left: 8px; }
         .proj-btn { transition: background 0.3s, color 0.3s, border-color 0.3s; }
         .proj-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
         .proj-btn:hover .proj-btn-text span { transform: translateY(-100%); }
@@ -719,18 +872,9 @@ export default function App() {
           <ParticlesBackground />
         </div>
 
-        {/* NAVBAR */}
-        <nav className="fixed w-full bg-gradient-to-b from-black/40 to-black/10 backdrop-blur-lg border-b border-white/10 text-white z-10">
-          <ul className="nav-list container mx-auto flex justify-center space-x-4 md:space-x-8 py-4">
-            {["Home","About","Skills","Projects","Contact"].map((section) => (
-              <li key={section}>
-                <a href={`#${section.toLowerCase()}`} className="nav-link">
-                  {section}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* NAVBAR — AP logo top-left + staggered menu top-right */}
+        <a href="#home" className="nav-logo" aria-label="Back to top">AP</a>
+        <StaggeredMenuNav sections={NAV_SECTIONS} />
 
         {/* HERO */}
         <section id="home" className="h-screen flex flex-col items-center justify-center pt-16 px-4" ref={heroSectionRef}>
@@ -748,15 +892,21 @@ export default function App() {
               animate={{ opacity: loading ? 0 : 1 }}
               transition={{ duration: 0.2, delay: 0.1 }}
             >
-              <ScrambleHero trigger={!loading && heroInView} />
+              <FocusHero trigger={!loading && heroInView} />
             </motion.h1>
             <motion.p
-              className="text-white/50 text-lg tracking-widest uppercase mb-8"
+              className="text-lg mb-8 flex items-center justify-center gap-3 flex-wrap"
               initial={{ opacity: 0 }}
               animate={{ opacity: loading ? 0 : 1 }}
               transition={{ duration: 0.8, delay: 0.7 }}
             >
-              BS in Computer Science
+              <span style={{
+                color: '#3b82f6',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+              }}>Software Engineer</span>
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 300, fontSize: '1.1em' }}>—</span>
+              <TypewriterRole />
             </motion.p>
             <motion.div
               className="flex justify-center items-center space-x-6 text-2xl"
@@ -768,6 +918,55 @@ export default function App() {
                 className="social-link text-white/50"><FaGithub /></a>
               <a href="https://linkedin.com/in/iamayushpatel03" target="_blank" rel="noopener noreferrer"
                 className="social-link text-white/50"><FaLinkedin /></a>
+            </motion.div>
+            <motion.div
+              className="flex justify-center mt-5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: loading ? 0 : 1 }}
+              transition={{ duration: 0.8, delay: 1.1 }}
+            >
+              <MagneticButton>
+                <a
+                  href="/Ayush_Patel_Resume.pdf"
+                  download="Ayush_Patel_Resume.pdf"
+                  className="inline-flex items-center gap-2 text-sm font-medium"
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.22)',
+                    color: 'rgba(255,255,255,0.82)',
+                    background: 'rgba(255,255,255,0.04)',
+                    transform: 'translate(-2px, -2px)',
+                    boxShadow: '3px 3px 0 rgba(255,255,255,0.16)',
+                    transition: 'transform 0.12s ease, box-shadow 0.12s ease, color 0.12s ease',
+                    textDecoration: 'none',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translate(-3.5px, -3.5px)';
+                    e.currentTarget.style.boxShadow = '5px 5px 0 rgba(255,255,255,0.22)';
+                    e.currentTarget.style.color = 'rgba(255,255,255,1)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                    e.currentTarget.style.boxShadow = '3px 3px 0 rgba(255,255,255,0.16)';
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.82)';
+                  }}
+                  onMouseDown={e => {
+                    e.currentTarget.style.transform = 'translate(0, 0)';
+                    e.currentTarget.style.boxShadow = '0 0 0 rgba(255,255,255,0)';
+                  }}
+                  onMouseUp={e => {
+                    e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                    e.currentTarget.style.boxShadow = '3px 3px 0 rgba(255,255,255,0.16)';
+                    e.currentTarget.style.color = 'rgba(255,255,255,1)';
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6.5 1v8M3 6.5l3.5 3.5 3.5-3.5"/><path d="M1 11h11"/>
+                  </svg>
+                  Resume
+                </a>
+              </MagneticButton>
             </motion.div>
           </motion.div>
           </div>

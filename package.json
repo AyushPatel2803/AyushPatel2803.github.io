@@ -1,5 +1,5 @@
 {
-  "homepage": "https://AyushPatel2803.github.io/My_Portfolio",
+  "homepage": "https://ayushpatel2803.github.io/",
   "name": "my-portfolio",
   "private": true,
   "version": "0.0.0",
@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist -r https://github.com/AyushPatel2803/AyushPatel2803.github.io.git -b main"
   },
   "dependencies": {
     "framer-motion": "^12.10.5",
