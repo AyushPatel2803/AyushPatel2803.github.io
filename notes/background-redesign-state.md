@@ -1,9 +1,11 @@
 # Background redesign + site work — resume notes
 
-Updated 2026-07-05 (late night session). This supersedes everything below from the old 3D-object hunt era.
+Updated 2026-07-08. This supersedes everything below from the old 3D-object hunt era.
 Summary also lives in `CLAUDE.md` → "What I'm Working On Right Now" (auto-loads each session).
 
-## ✅ DONE this session (all local, NOTHING deployed)
+**🚀 DEPLOYED 2026-07-08:** hero (True Focus once, blue Patel), nav (AP logo + Staggered Menu), blue SE title + white typewriter are LIVE at https://ayushpatel2803.github.io/ (gh-pages branch of the user-page repo; deploy script fixed). The live background is still the OLD particle stars — the video-story background (v13) is local-only, verdict pending. Demo files are gitignored; move them out of `public/` during any deploy (rule is in CLAUDE.md).
+
+## ✅ DONE earlier (2026-07-05 session)
 
 **Hero text (in `src/App.jsx`):**
 - ONE animation only: True Focus on first load (~4.5s total: dim → blue box on "Ayush" → glides to "Patel" → resolves). Scramble REMOVED. No animation on scroll-back. Component renamed `ScrambleHero` → `FocusHero`.
