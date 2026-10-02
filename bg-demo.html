@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Background Demo — Ayush Patel Portfolio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; font-family: Inter, system-ui, -apple-system, sans-serif; overflow: hidden; }
+  body { background: #000; }
+
+  /* ── Shared stage ───────────────────────────── */
+  .stage { position: fixed; inset: 0; overflow: hidden; opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+  .stage.active { opacity: 1; pointer-events: auto; }
+
+  .grain { position: absolute; inset: -50%; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: .035; mix-blend-mode: overlay; }
+
+  /* hero content (shared) */
+  .hero { position: relative; z-index: 5; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 0 6vw; }
+  .name { font-weight: 800; letter-spacing: -.03em; line-height: .95;
+    font-size: clamp(3rem, 10vw, 9rem); color: #fff; }
+  .sub { margin-top: 1.4rem; font-size: clamp(.7rem,1.1vw,.95rem); letter-spacing: .35em;
+    text-transform: uppercase; }
+
+  /* "Patel" animated gradient: blue -> violet -> pink */
+  .grad { background: linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#60a5fa);
+    background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; animation: slide 8s linear infinite; }
+  @keyframes slide { to { background-position: 300% 0; } }
+
+  /* solid blue Patel (for spotlight option) */
+  .blue { color: #3b82f6; }
+
+  /* ── A · Aurora Ambient ─────────────────────── */
+  #aurora { background: #060610; }
+  #aurora .blob { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
+  #aurora .b1 { width: 55vw; height: 55vw; left: -10vw; top: -8vw;
+    background: radial-gradient(circle, hsla(245,80%,60%,.55), transparent 70%); animation: drift1 34s ease-in-out infinite; }
+  #aurora .b2 { width: 50vw; height: 50vw; right: -12vw; top: 10vh;
+    background: radial-gradient(circle, hsla(270,75%,62%,.5), transparent 70%); animation: drift2 40s ease-in-out infinite; }
+  #aurora .b3 { width: 48vw; height: 48vw; left: 25vw; bottom: -18vw;
+    background: radial-gradient(circle, hsla(225,85%,58%,.5), transparent 70%); animation: drift3 30s ease-in-out infinite; }
+  @keyframes drift1 { 50% { transform: translate(6vw, 5vh); } }
+  @keyframes drift2 { 50% { transform: translate(-5vw, 7vh); } }
+  @keyframes drift3 { 50% { transform: translate(4vw, -6vh); } }
+  .sub-blue { color: rgba(255,255,255,.5); }
+
+  /* ── B · Pure Minimal ───────────────────────── */
+  #minimal { background: #07070f; }
+  #minimal .glow { position: absolute; top: -25vh; left: 50%; transform: translateX(-50%);
+    width: 90vw; height: 70vh;
+    background: radial-gradient(ellipse at center, hsla(245,70%,55%,.10), transparent 65%); }
+
+  /* ── C · Spotlight Mesh (Vercel) ────────────── */
+  #spotlight { background: #050509; }
+  #spotlight .mesh { position: absolute; inset: 0; will-change: transform;
+    background:
+      radial-gradient(40vw 40vw at 20% 25%, hsla(217,90%,55%,.22), transparent 60%),
+      radial-gradient(45vw 45vw at 82% 30%, hsla(255,80%,60%,.16), transparent 60%),
+      radial-gradient(50vw 50vw at 50% 95%, hsla(210,90%,50%,.14), transparent 60%);
+    animation: breathe 24s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.12) translateY(-3vh); } }
+  #spotlight .vignette { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.55)); }
+  #spotlight .line { position: absolute; top: 0; left: 50%; width: 1px; height: 100%;
+    background: linear-gradient(180deg, transparent, rgba(59,130,246,.25), transparent); opacity: .6; }
+
+  /* ── Switcher UI ────────────────────────────── */
+  .switch { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 50;
+    display: flex; gap: 8px; padding: 6px; border-radius: 100px;
+    background: rgba(20,20,30,.6); backdrop-filter: blur(14px); border: .5px solid rgba(255,255,255,.12); }
+  .switch button { font-family: inherit; font-size: 12px; letter-spacing: .04em; color: rgba(255,255,255,.55);
+    background: transparent; border: none; padding: 9px 16px; border-radius: 100px; cursor: pointer;
+    transition: color .25s, background .25s; }
+  .switch button:hover { color: #fff; }
+  .switch button.on { color: #fff; background: rgba(255,255,255,.12); }
+  .tag { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 50;
+    font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+  <!-- A · Aurora Ambient -->
+  <div class="stage active" id="aurora">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <div class="grain"></div>
+    <div class="hero">
+      <h1 class="name">Ayush <span class="grad">Patel</span></h1>
+      <p class="sub sub-blue">BS in Computer Science</p>
+    </div>
+  </div>
+
+  <!-- B · Pure Minimal -->
+  <div class="stage" id="minimal">
+    <div class="glow"></div>
+    <div class="grain"></div>
+    <div class="hero">
+      <h1 class="name">Ayush <span class="grad">Patel</span></h1>
+      <p class="sub sub-blue">BS in Computer Science</p>
+    </div>
+  </div>
+
+  <!-- C · Spotlight Mesh -->
+  <div class="stage" id="spotlight">
+    <div class="mesh"></div>
+    <div class="line"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+    <div class="hero">
+      <h1 class="name">Ayush <span class="blue">Patel</span></h1>
+      <p class="sub sub-blue">BS in Computer Science</p>
+    </div>
+  </div>
+
+  <div class="tag" id="tag">A · Aurora Ambient</div>
+  <div class="switch">
+    <button class="on" data-id="aurora">Aurora</button>
+    <button data-id="minimal">Minimal</button>
+    <button data-id="spotlight">Spotlight</button>
+  </div>
+
+  <script>
+    const labels = { aurora: "A · Aurora Ambient", minimal: "B · Pure Minimal", spotlight: "C · Spotlight Mesh" };
+    const btns = document.querySelectorAll(".switch button");
+    btns.forEach(b => b.addEventListener("click", () => {
+      const id = b.dataset.id;
+      document.querySelectorAll(".stage").forEach(s => s.classList.toggle("active", s.id === id));
+      btns.forEach(x => x.classList.toggle("on", x === b));
+      document.getElementById("tag").textContent = labels[id];
+    }));
+  </script>
+</body>
+</html>

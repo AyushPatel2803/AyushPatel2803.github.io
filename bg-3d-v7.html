@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>3D Liquid Scroll Demo — Ayush Patel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05030f; font-family: Inter, system-ui, sans-serif; color: #fff; }
+  #gl { position: fixed; inset: 0; z-index: 0; display: block; }
+  .content { position: relative; z-index: 2; }
+  section { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; }
+  section.center { align-items: center; text-align: center; }
+  .logo { position: fixed; top: 18px; left: 22px; z-index: 5; width: 44px; height: 44px; border-radius: 50%;
+    background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; }
+  .menu { position: fixed; top: 18px; right: 22px; z-index: 5; font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: #fff; border: 1px solid rgba(255,255,255,.22); border-radius: 999px;
+    padding: 10px 18px; background: rgba(10,10,20,.4); backdrop-filter: blur(10px); }
+  .name { font-weight: 800; letter-spacing: -.03em; line-height: .92; font-size: clamp(3rem, 11vw, 10rem);
+    text-shadow: 0 4px 60px rgba(0,0,0,.55); }
+  .blue { color: #3b82f6; }
+  .sub { margin-top: 1.3rem; font-size: clamp(.85rem,1.3vw,1.05rem); }
+  .sub .se { color: #3b82f6; font-weight: 600; letter-spacing: .04em; }
+  .sub .dash { color: rgba(255,255,255,.25); }
+  .sub .tw { color: #fff; font-weight: 500; }
+  .caret { display: inline-block; width: 2px; height: .8em; background: #fff; margin-left: 2px;
+    vertical-align: middle; animation: blink 1.1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .label { font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: #3b82f6; margin-bottom: 1rem; }
+  .big { font-weight: 800; font-size: clamp(2.3rem, 6.5vw, 5rem); letter-spacing: -.02em; line-height: 1.05; max-width: 16ch; }
+  .body { margin-top: 1.4rem; font-size: clamp(1rem,1.4vw,1.2rem); line-height: 1.65; color: rgba(255,255,255,.72); max-width: 34ch; }
+  .rows { margin-top: 2rem; width: min(520px, 100%); }
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 2px;
+    border-top: 1px solid rgba(255,255,255,.08); }
+  .row .k { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #3b82f6; font-weight: 600; }
+  .row .v { font-size: 14px; color: rgba(255,255,255,.7); }
+  .scrollhint { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 5;
+    font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.4);
+    animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translate(-50%, 6px); } }
+  .tag { position: fixed; bottom: 24px; right: 22px; z-index: 5; font-size: 10px; letter-spacing: .2em;
+    text-transform: uppercase; color: rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+  <div class="logo">AP</div>
+  <div class="menu">Menu +</div>
+  <div class="tag">G · 3D liquid · scroll</div>
+
+  <div class="content">
+    <section class="center">
+      <h1 class="name">Ayush <span class="blue">Patel</span></h1>
+      <p class="sub"><span class="se">Software Engineer</span> <span class="dash">—</span> <span class="tw" id="tw"></span><span class="caret"></span></p>
+    </section>
+    <section>
+      <div class="label">Who I am</div>
+      <div class="big">About Me</div>
+      <p class="body">Recent CS graduate from University of Michigan–Dearborn. React frontends, Python problem-solving, system architecture. The liquid splits and drifts aside as you read.</p>
+    </section>
+    <section style="align-items:flex-end; text-align:right;">
+      <div class="label">What I build</div>
+      <div class="big">Frontend. ML. Systems.</div>
+      <div class="rows">
+        <div class="row"><span class="k">Interfaces</span><span class="v">Build interfaces that move</span></div>
+        <div class="row"><span class="k">Models</span><span class="v">Train models that fit anywhere</span></div>
+        <div class="row"><span class="k">Systems</span><span class="v">Design systems that scale</span></div>
+      </div>
+    </section>
+    <section>
+      <div class="label">What I've built</div>
+      <div class="big">PyExplain. Enchanted Wars. RSNA Spine ML.</div>
+      <p class="body">Your horizontal showcase lives here — the liquid drifts low and the palette slides deeper blue.</p>
+    </section>
+    <section class="center">
+      <div class="label">Get in touch</div>
+      <div class="big" style="max-width:none;">Let's talk.</div>
+      <p class="body" style="margin:1.4rem auto 0; text-align:center;">By the end the scene settles into one calm drop — dark and quiet enough for the form.</p>
+    </section>
+  </div>
+  <div class="scrollhint">Scroll ↓</div>
+
+  <script type="importmap">
+  { "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+  <script type="module">
+  import * as THREE from 'three';
+  import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
+
+  const glsl = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g; vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+    return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+  float fbm(vec3 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*snoise(p); p*=2.0; a*=0.5; } return s; }
+  vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);
+    vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y); }
+  vec3 envColor(vec3 d, float hue){
+    float h=fract(0.60 + hue + d.x*0.10 + d.y*0.08);
+    float v=0.28 + 0.42*smoothstep(-1.0,1.0,d.y) + 0.16*smoothstep(0.6,1.0,d.x);
+    return hsv2rgb(vec3(h,0.55,v));
+  }`;
+
+  const canvas = document.getElementById('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.autoClear = false;
+
+  const mouse = new THREE.Vector2(0,0), target = new THREE.Vector2(0,0);
+  addEventListener('mousemove', e => {
+    target.x = (e.clientX/innerWidth)*2-1;
+    target.y = -((e.clientY/innerHeight)*2-1);
+  });
+
+  let scrollP = 0;
+  const updateScroll = () => scrollP = scrollY / Math.max(1, document.body.scrollHeight - innerHeight);
+  addEventListener('scroll', updateScroll, { passive: true }); updateScroll();
+
+  // ── marbled backdrop (dim, blue band) ─────────────────────────
+  const gScene = new THREE.Scene();
+  const gCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const gMat = new THREE.ShaderMaterial({
+    uniforms: { uTime:{value:0}, uMouse:{value:new THREE.Vector2()}, uAspect:{value:1}, uHue:{value:0}, uDim:{value:1} },
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+    fragmentShader: glsl + `
+      varying vec2 vUv; uniform float uTime; uniform vec2 uMouse; uniform float uAspect; uniform float uHue; uniform float uDim;
+      void main(){
+        vec2 uv=vUv; vec2 p=(uv-0.5); p.x*=uAspect;
+        vec3 q=vec3(p*2.0, uTime*0.02);
+        float w1=fbm(q+vec3(uMouse*0.3,0.0));
+        float w2=fbm(q+w1+vec3(4.2,1.3,0.0));
+        float n=fbm(q+0.7*w2); n=n*0.5+0.5;
+        float h=fract(0.63 + uHue + n*0.10);
+        float val=(0.035 + n*n*0.28) * uDim;
+        vec3 col=hsv2rgb(vec3(h, 0.55, val));
+        col*=1.0-0.42*length(uv-0.5);
+        float g=fract(sin(dot(uv*vec2(1024.0,768.0),vec2(12.9898,78.233)))*43758.5453);
+        col+=(g-0.5)*0.012;
+        gl_FragColor=vec4(col,1.0);
+      }`,
+  });
+  gScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), gMat));
+
+  // ── liquid metaballs ──────────────────────────────────────────
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
+  camera.position.z = 4.4;
+
+  const liquidMat = new THREE.ShaderMaterial({
+    uniforms: { uHue:{value:0}, uDim:{value:1} },
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ vN=normalize(normalMatrix*normal);
+        vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz);
+        gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: glsl + `
+      varying vec3 vN; varying vec3 vV; uniform float uHue; uniform float uDim;
+      void main(){ vec3 n=normalize(vN); vec3 v=normalize(vV);
+        float fres=pow(1.0-max(dot(n,v),0.0),2.0);
+        vec3 r=reflect(-v,n);
+        vec3 col=envColor(r,uHue)*0.85 + envColor(n,uHue)*0.25;
+        col+=vec3(0.85,0.9,1.0)*pow(fres,3.2)*0.55;
+        gl_FragColor=vec4(col*uDim,1.0); }`,
+  });
+
+  const RES = innerWidth < 768 ? 40 : 56;
+  const field = new MarchingCubes(RES, liquidMat, false, false, 60000);
+  field.scale.set(2.3, 2.3, 2.3);
+  field.isolation = 74;
+  scene.add(field);
+
+  // scroll keyframes: [px, py, spread, strength, scale, dim, hue]
+  const K = [
+    [ 1.45, 0.05, 0.115, 1.05, 1.00, 1.00,  0.000],  // hero — merged mass right of name
+    [-1.35, 0.10, 0.200, 0.62, 0.95, 0.80,  0.015],  // about — splits, moves left
+    [ 1.50, 0.00, 0.160, 0.55, 0.88, 0.62, -0.020],  // skills — right edge, calm
+    [ 0.30,-0.55, 0.130, 0.62, 0.80, 0.50,  0.030],  // projects — low drift, deep blue
+    [ 0.00,-0.35, 0.045, 0.85, 0.62, 0.40,  0.000],  // contact — one calm drop
+  ];
+  function kf(sp){
+    const seg = Math.min(3.9999, Math.max(0, sp*4));
+    const i = Math.floor(seg), f = seg - i;
+    const e = f*f*(3-2*f); // smoothstep between keyframes
+    const a = K[i], b = K[Math.min(4, i+1)];
+    return a.map((v, idx) => v + (b[idx]-v)*e);
+  }
+
+  function resize(){
+    const w=innerWidth, h=innerHeight;
+    renderer.setSize(w,h,false);
+    gMat.uniforms.uAspect.value = w/h;
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+
+  // typewriter
+  const roles=['ML & LLM','Full Stack','React · Node'];
+  let ri=0, ci=0, del=false;
+  setInterval(()=>{ const r=roles[ri]; const el=document.getElementById('tw');
+    if(!del){ ci++; el.textContent=r.slice(0,ci); if(ci>=r.length+16) del=true; }
+    else { ci--; if(ci<=r.length) el.textContent=r.slice(0,Math.max(0,ci)); if(ci<=0){ del=false; ri=(ri+1)%roles.length; } }
+  },80);
+
+  let sp=0;
+  const clock = new THREE.Clock();
+  function tick(){
+    const t = clock.getElapsedTime();
+    mouse.lerp(target, 0.05);
+    sp += (scrollP - sp)*0.06;
+    const [px, py, spread, strength, scl, dim, hue] = kf(sp);
+
+    gMat.uniforms.uTime.value=t; gMat.uniforms.uMouse.value.copy(mouse);
+    gMat.uniforms.uHue.value=hue; gMat.uniforms.uDim.value=dim;
+    liquidMat.uniforms.uHue.value=hue; liquidMat.uniforms.uDim.value=dim;
+
+    field.position.set(px + mouse.x*0.18, py + mouse.y*0.15, 0);
+    field.scale.setScalar(2.3*scl);
+    field.reset();
+    for(let i=0;i<5;i++){
+      const bx = 0.5 + Math.sin(t*0.42+i*2.1)*spread*(0.75+0.25*Math.sin(t*0.3+i*1.3));
+      const by = 0.5 + Math.cos(t*0.35+i*1.7)*spread*0.85;
+      const bz = 0.5 + Math.sin(t*0.30+i*2.7)*spread*0.6;
+      field.addBall(bx, by, bz, strength*(0.42+0.10*Math.sin(t*0.8+i)), 12);
+    }
+    // cursor ball — liquid follows the pointer
+    field.addBall(0.5 + mouse.x*0.28, 0.5 + mouse.y*0.24, 0.55, 0.30, 12);
+    field.update();
+
+    camera.position.x = mouse.x*0.35;
+    camera.position.y = mouse.y*0.28 - sp*0.3;
+    camera.lookAt(field.position.x*0.4, field.position.y*0.4 - sp*0.3, 0);
+
+    renderer.clear();
+    renderer.render(gScene, gCam);
+    renderer.clearDepth();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  tick();
+  </script>
+</body>
+</html>

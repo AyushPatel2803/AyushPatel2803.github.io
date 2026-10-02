@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scroll 3D Demo v5 — shape picker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #05030f; font-family: Inter, system-ui, sans-serif; color: #fff; }
+  #gl { position: fixed; inset: 0; z-index: 0; display: block; }
+  .content { position: relative; z-index: 2; }
+  section { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 0 8vw; }
+  section.center { align-items: center; text-align: center; }
+  .name { font-weight: 800; letter-spacing: -.03em; line-height: .92; font-size: clamp(3rem, 11vw, 10rem); text-shadow: 0 4px 60px rgba(0,0,0,.55); }
+  .grad { background: linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#60a5fa); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: slide 8s linear infinite; }
+  @keyframes slide { to { background-position: 300% 0; } }
+  .sub { margin-top: 1.4rem; font-size: clamp(.7rem,1.1vw,.95rem); letter-spacing: .35em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+  .label { font-size: 12px; letter-spacing: .25em; text-transform: uppercase; color: #a78bfa; margin-bottom: 1rem; }
+  .big { font-weight: 800; font-size: clamp(2.5rem, 7vw, 5.5rem); letter-spacing: -.02em; line-height: 1; max-width: 14ch; }
+  .body { margin-top: 1.5rem; font-size: clamp(1rem,1.5vw,1.3rem); line-height: 1.6; color: rgba(255,255,255,.72); max-width: 30ch; }
+  .scrollhint { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.4); animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translate(-50%, 6px); } }
+  .switch { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; gap: 4px; padding: 5px; flex-wrap: wrap; justify-content: center; max-width: 92vw;
+    border-radius: 100px; background: rgba(20,20,30,.6); backdrop-filter: blur(14px); border: .5px solid rgba(255,255,255,.12); }
+  .switch button { font-family: inherit; font-size: 12px; letter-spacing: .02em; color: rgba(255,255,255,.55); background: transparent;
+    border: none; padding: 7px 14px; border-radius: 100px; cursor: pointer; transition: all .25s; }
+  .switch button:hover { color: #fff; } .switch button.on { color: #fff; background: rgba(255,255,255,.14); }
+</style>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+  <div class="switch" id="switch">
+    <button class="on" data-id="blob">Blob</button>
+    <button data-id="sphere">Sphere</button>
+    <button data-id="torus">Torus</button>
+    <button data-id="capsule">Capsule</button>
+    <button data-id="octa">Octahedron</button>
+    <button data-id="spiral">Spiral</button>
+  </div>
+
+  <div class="content">
+    <section class="center">
+      <h1 class="name">Ayush <span class="grad">Patel</span></h1>
+      <p class="sub">BS in Computer Science</p>
+    </section>
+    <section>
+      <div class="label">Who I am</div>
+      <div class="big">I build things that move.</div>
+      <p class="body">Same glossy background, same scroll motion — only the shape changes. Pick the one you like.</p>
+    </section>
+    <section style="align-items:flex-end; text-align:right;">
+      <div class="label">What I build</div>
+      <div class="big">Frontend. ML. Systems.</div>
+      <p class="body">Watch how each shape drifts and rotates as you scroll.</p>
+    </section>
+    <section class="center">
+      <div class="label">Get in touch</div>
+      <div class="big" style="max-width:none;">Let's talk.</div>
+      <p class="body" style="margin:1.5rem auto 0; text-align:center;">Background calms here so a form stays readable.</p>
+    </section>
+  </div>
+  <div class="scrollhint">Scroll ↓</div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module">
+  import * as THREE from 'three';
+
+  const snoise = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g; vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+    return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+  float fbm(vec3 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*snoise(p); p*=2.0; a*=0.5; } return s; }
+  vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.0,2.0/3.0,1.0/3.0,3.0);
+    vec3 p=abs(fract(c.xxx+K.xyz)*6.0-K.www); return c.z*mix(K.xxx,clamp(p-K.xxx,0.0,1.0),c.y); }`;
+
+  const canvas = document.getElementById('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.autoClear = false;
+  const mouse = new THREE.Vector2(0,0), target = new THREE.Vector2(0,0);
+  addEventListener('mousemove', e => { target.x=(e.clientX/innerWidth)*2-1; target.y=-((e.clientY/innerHeight)*2-1); });
+  let scrollP = 0;
+  const updateScroll = () => scrollP = scrollY / Math.max(1, document.body.scrollHeight - innerHeight);
+  addEventListener('scroll', updateScroll, { passive: true }); updateScroll();
+
+  // glossy background gradient (kept — user likes it)
+  const gScene = new THREE.Scene();
+  const gCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const gMat = new THREE.ShaderMaterial({
+    uniforms: { uTime:{value:0}, uMouse:{value:new THREE.Vector2()}, uAspect:{value:1}, uHue:{value:0}, uDim:{value:1} },
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`,
+    fragmentShader: snoise + `
+      varying vec2 vUv; uniform float uTime; uniform vec2 uMouse; uniform float uAspect; uniform float uHue; uniform float uDim;
+      void main(){
+        vec2 uv=vUv; vec2 p=(uv-0.5); p.x*=uAspect;
+        vec3 q=vec3(p*2.0, uTime*0.025);
+        float w1=fbm(q+vec3(uMouse*0.35,0.0));
+        float w2=fbm(q+w1+vec3(4.2,1.3,0.0));
+        float n=fbm(q+0.7*w2); n=n*0.5+0.5;
+        float h=fract(0.62 + uHue + n*0.13);
+        float val=(0.06 + n*n*0.4) * uDim;
+        vec3 col=hsv2rgb(vec3(h, 0.58, val));
+        col*=1.0-0.42*length(uv-0.5);
+        float g=fract(sin(dot(uv*vec2(1024.0,768.0),vec2(12.9898,78.233)))*43758.5453);
+        col+=(g-0.5)*0.015;
+        gl_FragColor=vec4(col,1.0);
+      }`,
+  });
+  gScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), gMat));
+
+  // glossy iridescent material (smooth shapes)
+  const oScene = new THREE.Scene();
+  const oCam = new THREE.PerspectiveCamera(50,1,0.1,100); oCam.position.z=4.2;
+  function makeMat(){ return new THREE.ShaderMaterial({
+    uniforms: { uHue:{value:0}, uDim:{value:1} },
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: snoise + `
+      varying vec3 vN; varying vec3 vV; uniform float uHue; uniform float uDim;
+      void main(){ vec3 n=normalize(vN); vec3 v=normalize(vV);
+        float fres=pow(1.0-max(dot(n,v),0.0),2.0);
+        float h=fract(0.60 + uHue + n.x*0.10 + n.y*0.16 + fres*0.18);
+        vec3 col=hsv2rgb(vec3(h, 0.5, (0.42+fres*0.5)*uDim));
+        col+=vec3(1.0)*pow(fres,4.5)*0.85*uDim;
+        gl_FragColor=vec4(col,1.0); }`,
+  }); }
+
+  // morphing glossy blob material (recomputed normals)
+  const blobMat = new THREE.ShaderMaterial({
+    uniforms: { uHue:{value:0}, uDim:{value:1}, uTime:{value:0} },
+    vertexShader: snoise + `
+      uniform float uTime; varying vec3 vN; varying vec3 vV;
+      vec3 displace(vec3 p){ float n=snoise(p*1.1+uTime*0.2)*0.22 + snoise(p*2.3-uTime*0.15)*0.08; return p+normal*n; }
+      void main(){ vec3 dp=displace(position);
+        float e=0.06; vec3 t=normalize(cross(normal,vec3(0.0,1.0,0.0))+0.001); vec3 b=normalize(cross(normal,t));
+        vec3 n1=displace(position+t*e); vec3 n2=displace(position+b*e);
+        vN=normalize(normalMatrix*(normalize(cross(n1-dp,n2-dp))*-1.0));
+        vec4 mv=modelViewMatrix*vec4(dp,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: snoise + `
+      varying vec3 vN; varying vec3 vV; uniform float uHue; uniform float uDim;
+      void main(){ vec3 n=normalize(vN); vec3 v=normalize(vV);
+        float fres=pow(1.0-max(dot(n,v),0.0),2.0);
+        float h=fract(0.60 + uHue + n.x*0.10 + n.y*0.16 + fres*0.18);
+        vec3 col=hsv2rgb(vec3(h, 0.5, (0.42+fres*0.5)*uDim));
+        col+=vec3(1.0)*pow(fres,4.5)*0.85*uDim;
+        gl_FragColor=vec4(col,1.0); }`,
+  });
+
+  const meshes = {
+    blob:    new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 64), blobMat),
+    sphere:  new THREE.Mesh(new THREE.IcosahedronGeometry(1.2, 24), makeMat()),
+    torus:   new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.34, 64, 160), makeMat()),
+    capsule: new THREE.Mesh(new THREE.CapsuleGeometry(0.62, 1.1, 24, 64), makeMat()),
+    octa:    new THREE.Mesh(new THREE.OctahedronGeometry(1.4, 0), makeMat()),
+    spiral:  new THREE.Mesh(new THREE.TorusKnotGeometry(0.75, 0.24, 256, 32, 2, 3), makeMat()),
+  };
+  Object.values(meshes).forEach((m,i)=>{ m.visible = i===0; oScene.add(m); });
+
+  let mode='blob';
+  document.querySelectorAll('.switch button').forEach(b=>b.addEventListener('click',()=>{
+    mode=b.dataset.id;
+    Object.entries(meshes).forEach(([k,m])=> m.visible = k===mode);
+    document.querySelectorAll('.switch button').forEach(x=>x.classList.toggle('on',x===b));
+  }));
+
+  function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false);
+    gMat.uniforms.uAspect.value=w/h; oCam.aspect=w/h; oCam.updateProjectionMatrix(); }
+  addEventListener('resize', resize); resize();
+
+  let sp=0; const clock=new THREE.Clock();
+  function tick(){
+    const t=clock.getElapsedTime();
+    mouse.lerp(target,0.05); sp += (scrollP - sp)*0.07;
+    const dim = 1.0 - 0.55*Math.min(1, Math.max(0,(sp-0.1)/0.5));
+    const hue = Math.sin(sp*Math.PI*2)*0.05;
+    gMat.uniforms.uTime.value=t; gMat.uniforms.uMouse.value.copy(mouse); gMat.uniforms.uHue.value=hue; gMat.uniforms.uDim.value=dim;
+    blobMat.uniforms.uTime.value=t;
+    Object.values(meshes).forEach(m=>{ if(m.material.uniforms){ m.material.uniforms.uHue.value=hue; m.material.uniforms.uDim.value=dim; } });
+
+    const active = meshes[mode];
+    active.rotation.y = t*0.18 + sp*3.0;
+    active.rotation.x = sp*1.6 + mouse.y*0.3;
+    active.position.x = 1.7 + Math.sin(sp*Math.PI)*0.8 + mouse.x*0.25;
+    active.position.y = -sp*1.0;
+    active.scale.setScalar(1.0 - sp*0.3);
+    oCam.position.x=mouse.x*0.3; oCam.position.y=mouse.y*0.3; oCam.lookAt(0,0,0);
+
+    renderer.clear(); renderer.render(gScene,gCam); renderer.clearDepth(); renderer.render(oScene,oCam);
+    requestAnimationFrame(tick);
+  }
+  tick();
+  </script>
+</body>
+</html>

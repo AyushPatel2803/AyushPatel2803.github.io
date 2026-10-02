@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Liquid Glass Hero — Ayush Patel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --background: hsl(201 100% 13%);
+    --foreground: hsl(0 0% 100%);
+    --muted-foreground: hsl(240 4% 66%);
+    --font-display: 'Instrument Serif', serif;
+    --font-body: 'Inter', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body { background: var(--background); color: var(--foreground); font-family: var(--font-body); overflow-x: hidden; }
+
+  /* fullscreen looping video */
+  #bgvid { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+
+  /* liquid glass */
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.01);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+      rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* nav */
+  nav { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 32px; max-width: 80rem; margin: 0 auto; }
+  .logo { font-family: var(--font-display); font-size: 1.875rem; letter-spacing: -0.02em; color: var(--foreground); }
+  .logo sup { font-size: 0.75rem; }
+  .navlinks { display: none; gap: 2rem; align-items: center; }
+  @media (min-width: 768px) { .navlinks { display: flex; } }
+  .navlinks a { font-size: 0.875rem; color: var(--muted-foreground); text-decoration: none; transition: color 0.25s; }
+  .navlinks a:hover, .navlinks a.active { color: var(--foreground); }
+  .cta { font-family: var(--font-body); font-size: 0.875rem; color: var(--foreground); border-radius: 9999px;
+    padding: 10px 24px; cursor: pointer; transition: transform 0.25s; display: inline-block; text-decoration: none; }
+  .cta:hover { transform: scale(1.03); }
+
+  /* hero */
+  .hero { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 90px 24px; min-height: calc(100vh - 92px); justify-content: center; }
+  h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(3rem, 9vw, 6rem);
+    line-height: 0.95; letter-spacing: -2.46px; max-width: 80rem; }
+  h1 em { font-style: normal; color: var(--muted-foreground); }
+  .subtext { color: var(--muted-foreground); font-size: clamp(1rem, 1.4vw, 1.125rem); max-width: 42rem;
+    margin-top: 2rem; line-height: 1.65; }
+  .hero .cta { padding: 20px 56px; font-size: 1rem; margin-top: 3rem; }
+
+  /* animations */
+  @keyframes fade-rise {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-rise { animation: fade-rise 0.8s ease-out both; }
+  .animate-fade-rise-delay { animation: fade-rise 0.8s ease-out 0.2s both; }
+  .animate-fade-rise-delay-2 { animation: fade-rise 0.8s ease-out 0.4s both; }
+</style>
+</head>
+<body>
+  <video id="bgvid" autoplay loop muted playsinline
+    src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4"></video>
+
+  <nav>
+    <span class="logo">Ayush Patel<sup>®</sup></span>
+    <div class="navlinks">
+      <a href="#" class="active">Home</a>
+      <a href="#">About</a>
+      <a href="#">Skills</a>
+      <a href="#">Projects</a>
+      <a href="#">Contact</a>
+    </div>
+    <a href="#" class="cta liquid-glass">View Resume</a>
+  </nav>
+
+  <section class="hero">
+    <h1 class="animate-fade-rise">Where <em>code</em> rises<br/>through <em>the silence.</em></h1>
+    <p class="subtext animate-fade-rise-delay">
+      Software engineer crafting for deep thinkers, bold creators, and quiet rebels.
+      Amid the chaos, I build digital spaces for sharp focus and inspired work.
+    </p>
+    <a href="#" class="cta liquid-glass animate-fade-rise-delay-2">Begin Journey</a>
+  </section>
+</body>
+</html>

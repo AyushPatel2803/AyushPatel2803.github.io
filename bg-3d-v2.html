@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>3D Background Demo v2 — Ayush Patel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #04040a; font-family: Inter, system-ui, sans-serif; }
+  #gl { position: fixed; inset: 0; display: block; }
+  .hero { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+  .name { font-weight: 800; letter-spacing: -.03em; line-height: .95; color: #fff;
+    font-size: clamp(3rem, 10vw, 9rem); text-shadow: 0 2px 50px rgba(0,0,0,.6); }
+  .grad { background: linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#60a5fa);
+    background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; animation: slide 8s linear infinite; }
+  @keyframes slide { to { background-position: 300% 0; } }
+  .sub { margin-top: 1.4rem; font-size: clamp(.7rem,1.1vw,.95rem); letter-spacing: .35em;
+    text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .switch { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 50;
+    display: flex; gap: 6px; padding: 6px; border-radius: 100px;
+    background: rgba(20,20,30,.6); backdrop-filter: blur(14px); border: .5px solid rgba(255,255,255,.12); }
+  .switch button { font-family: inherit; font-size: 12px; letter-spacing: .03em; color: rgba(255,255,255,.55);
+    background: transparent; border: none; padding: 9px 16px; border-radius: 100px; cursor: pointer; transition: all .25s; }
+  .switch button:hover { color: #fff; }
+  .switch button.on { color: #fff; background: rgba(255,255,255,.12); }
+  .tag { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 50;
+    font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+  <div class="hero">
+    <h1 class="name">Ayush <span class="grad">Patel</span></h1>
+    <p class="sub">BS in Computer Science</p>
+  </div>
+  <div class="tag" id="tag">E1 · Fluid Gradient</div>
+  <div class="switch">
+    <button class="on" data-id="fluid">Fluid Gradient</button>
+    <button data-id="silk">Silk Wave</button>
+    <button data-id="nebula">Depth Nebula</button>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module">
+  import * as THREE from 'three';
+
+  const snoise = `
+  vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+  vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+  float snoise(vec3 v){
+    const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+    vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+    vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g; vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+    vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+    i=mod289(i);
+    vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+    float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+    vec4 j=p-49.0*floor(p*ns.z*ns.z);
+    vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+    vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+    vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+    vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+    vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+    vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
+    vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+    return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+  float fbm(vec3 p){ float s=0.0,a=0.5; for(int i=0;i<5;i++){ s+=a*snoise(p); p*=2.0; a*=0.5; } return s; }`;
+
+  const canvas = document.getElementById('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+  const mouse = new THREE.Vector2(0, 0);
+  const target = new THREE.Vector2(0, 0);
+  addEventListener('mousemove', e => {
+    target.x = (e.clientX / innerWidth) * 2 - 1;
+    target.y = -((e.clientY / innerHeight) * 2 - 1);
+  });
+
+  // ── E1 · FLUID GRADIENT (fullscreen) ─────────────────
+  const gScene = new THREE.Scene();
+  const gCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const gMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uMouse: { value: new THREE.Vector2() }, uAspect: { value: 1 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: snoise + `
+      varying vec2 vUv; uniform float uTime; uniform vec2 uMouse; uniform float uAspect;
+      void main(){
+        vec2 uv = vUv; vec2 p = (uv - 0.5); p.x *= uAspect;
+        vec3 q = vec3(p * 2.4, uTime * 0.04);
+        float w1 = fbm(q + vec3(uMouse * 0.4, 0.0));
+        float w2 = fbm(q + w1 + vec3(4.2, 1.3, 0.0));
+        float n = fbm(q + 0.8 * w2); n = n * 0.5 + 0.5;
+        vec3 dark   = vec3(0.015,0.016,0.045);
+        vec3 blue   = vec3(0.09,0.20,0.52);
+        vec3 violet = vec3(0.34,0.22,0.60);
+        vec3 pink   = vec3(0.62,0.26,0.50);
+        vec3 col = mix(dark, blue, smoothstep(0.15,0.5,n));
+        col = mix(col, violet, smoothstep(0.45,0.72,n));
+        col = mix(col, pink, smoothstep(0.72,0.96,n));
+        col *= 1.0 - 0.45 * length(uv - 0.5);
+        float g = fract(sin(dot(uv*vec2(1024.0,768.0), vec2(12.9898,78.233))) * 43758.5453);
+        col += (g - 0.5) * 0.025;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  gScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), gMat));
+
+  // ── E2 · SILK WAVE ───────────────────────────────────
+  const sScene = new THREE.Scene();
+  const sCam = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+  sCam.position.set(0, 2.2, 5.5); sCam.lookAt(0, -0.5, -3);
+  const SW = 220, SD = 160, sCount = SW * SD;
+  const sPos = new Float32Array(sCount * 3);
+  let si = 0;
+  for (let z = 0; z < SD; z++) for (let x = 0; x < SW; x++) {
+    sPos[si*3] = (x / SW - 0.5) * 16; sPos[si*3+1] = 0; sPos[si*3+2] = (z / SD - 0.5) * 16; si++;
+  }
+  const sGeo = new THREE.BufferGeometry();
+  sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  const sMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: snoise + `
+      uniform float uTime; varying float vH; varying float vFog;
+      void main(){
+        vec3 p = position;
+        float h = fbm(vec3(p.x*0.25, p.z*0.25, uTime*0.12)) * 1.6;
+        p.y = h; vH = h;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vFog = smoothstep(12.0, 2.0, -mv.z);
+        gl_PointSize = (28.0 / -mv.z) * (0.6 + 0.4*step(0.0,h));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying float vH; varying float vFog;
+      void main(){
+        float d = length(gl_PointCoord - 0.5); if(d>0.5) discard;
+        float a = smoothstep(0.5,0.0,d) * vFog;
+        vec3 blue=vec3(0.376,0.647,0.980); vec3 violet=vec3(0.655,0.545,0.980); vec3 pink=vec3(0.957,0.447,0.714);
+        float t = clamp(vH*0.5+0.5, 0.0, 1.0);
+        vec3 col = mix(blue, violet, t); col = mix(col, pink, smoothstep(0.65,1.0,t));
+        gl_FragColor = vec4(col, a*0.8);
+      }`,
+  });
+  const silk = new THREE.Points(sGeo, sMat); sScene.add(silk);
+
+  // ── E3 · DEPTH NEBULA ────────────────────────────────
+  const nScene = new THREE.Scene();
+  const nCam = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  nCam.position.z = 6;
+  const nCount = 6000;
+  const nPos = new Float32Array(nCount * 3), nRnd = new Float32Array(nCount);
+  for (let i = 0; i < nCount; i++) {
+    nPos[i*3] = (Math.random()-0.5) * 16;
+    nPos[i*3+1] = (Math.random()-0.5) * 10;
+    nPos[i*3+2] = (Math.random()-0.5) * 14 - 2;
+    nRnd[i] = Math.random();
+  }
+  const nGeo = new THREE.BufferGeometry();
+  nGeo.setAttribute('position', new THREE.BufferAttribute(nPos, 3));
+  nGeo.setAttribute('aRnd', new THREE.BufferAttribute(nRnd, 1));
+  const nMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: snoise + `
+      uniform float uTime; attribute float aRnd; varying float vMix; varying float vFog;
+      void main(){
+        vec3 p = position;
+        p.x += snoise(p*0.2 + uTime*0.05) * 0.6;
+        p.y += snoise(p*0.2 + 10.0 + uTime*0.05) * 0.6;
+        vMix = aRnd;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vFog = smoothstep(14.0, 3.0, -mv.z);
+        gl_PointSize = (10.0 + aRnd*26.0) / -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying float vMix; varying float vFog;
+      void main(){
+        float d = length(gl_PointCoord - 0.5); if(d>0.5) discard;
+        float a = smoothstep(0.5,0.0,d) * vFog;
+        vec3 blue=vec3(0.376,0.647,0.980); vec3 violet=vec3(0.655,0.545,0.980); vec3 pink=vec3(0.957,0.447,0.714);
+        vec3 col = mix(blue, violet, vMix); col = mix(col, pink, smoothstep(0.6,1.0,vMix));
+        gl_FragColor = vec4(col, a*0.6);
+      }`,
+  });
+  const nebula = new THREE.Points(nGeo, nMat); nScene.add(nebula);
+
+  // ── mode switching ───────────────────────────────────
+  let mode = 'fluid';
+  const labels = { fluid: 'E1 · Fluid Gradient', silk: 'E2 · Silk Wave', nebula: 'E3 · Depth Nebula' };
+  document.querySelectorAll('.switch button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.id;
+    document.querySelectorAll('.switch button').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('tag').textContent = labels[mode];
+  }));
+
+  function resize(){
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    gMat.uniforms.uAspect.value = w / h;
+    sCam.aspect = w / h; sCam.updateProjectionMatrix();
+    nCam.aspect = w / h; nCam.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+
+  const clock = new THREE.Clock();
+  function tick(){
+    const t = clock.getElapsedTime();
+    mouse.lerp(target, 0.05);
+    if (mode === 'fluid') {
+      gMat.uniforms.uTime.value = t; gMat.uniforms.uMouse.value.copy(mouse);
+      renderer.render(gScene, gCam);
+    } else if (mode === 'silk') {
+      sMat.uniforms.uTime.value = t;
+      silk.rotation.y = mouse.x * 0.15;
+      sCam.position.x = mouse.x * 0.8; sCam.lookAt(0, -0.3, -3);
+      renderer.render(sScene, sCam);
+    } else {
+      nMat.uniforms.uTime.value = t;
+      nebula.rotation.y = t * 0.02 + mouse.x * 0.2;
+      nCam.position.x = mouse.x * 1.2; nCam.position.y = mouse.y * 0.8; nCam.lookAt(0,0,0);
+      renderer.render(nScene, nCam);
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+  </script>
+</body>
+</html>

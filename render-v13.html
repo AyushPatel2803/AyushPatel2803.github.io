@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Render v13 → video</title>
+<style>
+  body { background:#0a0a12; color:#fff; font-family:Inter,system-ui,sans-serif; margin:0; padding:20px; }
+  #status { font-size:13px; letter-spacing:.04em; margin-bottom:14px; }
+  #bar { height:6px; background:rgba(255,255,255,.12); border-radius:99px; overflow:hidden; width:min(720px,90vw); }
+  #fill { height:100%; width:0%; background:#3b82f6; transition:width .1s linear; }
+  canvas { width:min(720px,90vw); margin-top:16px; border-radius:8px; display:block; }
+  a.dl { display:inline-block; margin-top:14px; background:#3b82f6; color:#fff; text-decoration:none;
+         padding:10px 20px; border-radius:99px; font-size:13px; font-weight:600; }
+</style>
+</head>
+<body>
+  <div id="status">Loading videos…</div>
+  <div id="bar"><div id="fill"></div></div>
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <div id="out"></div>
+
+<script>
+(async function () {
+  const FPS = 30, SECONDS = 20, TOTAL = FPS * SECONDS;
+
+  // ── same story geometry as bg-video-v13.html ──────────────────
+  const A_END = 0.37;
+  const D1 = 0.40, D1W = 0.030;
+  const B_START = 0.43, B_END = 0.55;
+  const D2 = 0.60, D2W = 0.050;
+  const C_START = 0.65;
+  const MAP_A = [[0.00, 0.00], [0.30, 0.30], [A_END, 0.47]];
+  const MAP_B = [[B_START, 0.87], [B_END, 0.995]];
+  const MAP_C = [[C_START, 0.02], [1.00, 0.98]];
+
+  function mapTime(map, p) {
+    for (let i = 0; i < map.length - 1; i++) {
+      const [p0, t0] = map[i], [p1, t1] = map[i + 1];
+      if (p <= p1) {
+        const f = Math.max(0, (p - p0) / (p1 - p0));
+        const e = f * f * (3 - 2 * f);
+        return t0 + (t1 - t0) * e;
+      }
+    }
+    return map[map.length - 1][1];
+  }
+  function smooth(t) { return t * t * (3 - 2 * t); }
+
+  const status = document.getElementById('status');
+  const fill = document.getElementById('fill');
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const oc = document.createElement('canvas');
+  oc.width = canvas.width; oc.height = canvas.height;
+  const octx = oc.getContext('2d');
+
+  function loadVideo(src) {
+    return new Promise((res, rej) => {
+      const v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = src;
+      v.onloadeddata = () => res(v);
+      v.onerror = rej;
+      setTimeout(() => rej(new Error('timeout ' + src)), 30000);
+    });
+  }
+  function seek(v, t) {
+    return new Promise((res) => {
+      const target = Math.max(0, Math.min(v.duration - 0.02, t));
+      if (Math.abs(v.currentTime - target) < 0.001) return res();
+      const on = () => { v.removeEventListener('seeked', on); res(); };
+      v.addEventListener('seeked', on);
+      v.currentTime = target;
+      setTimeout(res, 2000);
+    });
+  }
+
+  const cliff = await loadVideo('/cliff-take1.mp4');
+  const chip = await loadVideo('/bg-circuit.mp4');
+  status.textContent = 'Grabbing transition anchors…';
+
+  async function bitmapAt(v, frac) {
+    await seek(v, frac * v.duration);
+    return await createImageBitmap(v);
+  }
+  const aLast  = await bitmapAt(cliff, 0.47);   // end of the cliff approach
+  const bFirst = await bitmapAt(cliff, 0.87);   // start of the digital flight
+  const bLast  = await bitmapAt(cliff, 0.995);  // end of the digital flight
+  const cFirst = await bitmapAt(chip, 0.02);    // arrival on the board
+
+  function drawCover(src, zoom, alpha, target) {
+    const t = target || ctx;
+    const cw = t.canvas.width, ch = t.canvas.height;
+    const sw = src.width || src.videoWidth, sh = src.height || src.videoHeight;
+    const s = Math.max(cw / sw, ch / sh) * zoom;
+    t.globalAlpha = alpha;
+    t.drawImage(src, (cw - sw * s) / 2, (ch - sh * s) / 2, sw * s, sh * s);
+    t.globalAlpha = 1;
+  }
+
+  async function renderAt(p) {
+    const cw = canvas.width, ch = canvas.height;
+    ctx.clearRect(0, 0, cw, ch);
+
+    if (p < D1 - D1W) {
+      await seek(cliff, mapTime(MAP_A, p) * cliff.duration);
+      drawCover(cliff, 1, 1);
+    } else if (Math.abs(p - D1) <= D1W) {
+      const t = smooth((p - (D1 - D1W)) / (2 * D1W));
+      drawCover(bFirst, 1.35 - 0.35 * t, 1);
+      const rush = 1 + 1.3 * Math.pow(t, 1.5);
+      const fade = Math.pow(1 - t, 1.35);
+      for (let i = 3; i >= 1; i--) drawCover(aLast, rush * (1 + i * 0.045), fade * 0.14);
+      drawCover(aLast, rush, fade);
+      const wash = Math.sin(Math.PI * t) * 0.30;
+      if (wash > 0.01) { ctx.fillStyle = 'rgba(29,78,216,' + wash + ')'; ctx.fillRect(0, 0, cw, ch); }
+    } else if (p < D2 - D2W) {
+      await seek(cliff, mapTime(MAP_B, p) * cliff.duration);
+      drawCover(cliff, 1, 1);
+    } else if (Math.abs(p - D2) <= D2W) {
+      const t = smooth((p - (D2 - D2W)) / (2 * D2W));
+      drawCover(bLast, 1 + 0.9 * t, 1);
+      const ow = oc.width, oh = oc.height;
+      octx.clearRect(0, 0, ow, oh);
+      drawCover(cFirst, 1.2 - 0.2 * t, 1, octx);
+      const R = Math.hypot(ow, oh) / 2 * 1.02;
+      const r = (0.05 + 0.95 * Math.pow(t, 1.4)) * R;
+      const m = octx.createRadialGradient(ow / 2, oh / 2, Math.max(0, r * 0.72), ow / 2, oh / 2, r);
+      m.addColorStop(0, 'rgba(0,0,0,1)');
+      m.addColorStop(1, 'rgba(0,0,0,0)');
+      octx.globalCompositeOperation = 'destination-in';
+      octx.fillStyle = m; octx.fillRect(0, 0, ow, oh);
+      octx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(oc, 0, 0);
+      if (t < 0.96) {
+        const g = ctx.createRadialGradient(cw / 2, ch / 2, Math.max(0, r * 0.85), cw / 2, ch / 2, r * 1.2 + 2);
+        g.addColorStop(0, 'rgba(59,130,246,0)');
+        g.addColorStop(0.5, 'rgba(96,165,250,' + (0.45 * (1 - t)) + ')');
+        g.addColorStop(1, 'rgba(59,130,246,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+      }
+    } else {
+      await seek(chip, mapTime(MAP_C, p) * chip.duration);
+      drawCover(chip, 1, 1);
+    }
+  }
+
+  // ── record every rendered frame ───────────────────────────────
+  const stream = canvas.captureStream(0);
+  const track = stream.getVideoTracks()[0];
+  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9' : 'video/webm';
+  const chunks = [];
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12000000 });
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+
+  const done = new Promise(res => { rec.onstop = res; });
+  rec.start();
+  status.textContent = 'Rendering 0 / ' + TOTAL;
+
+  for (let i = 0; i < TOTAL; i++) {
+    await renderAt(i / (TOTAL - 1));
+    track.requestFrame();
+    if (i % 10 === 0) {
+      status.textContent = 'Rendering ' + i + ' / ' + TOTAL;
+      fill.style.width = (100 * i / TOTAL) + '%';
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+  rec.stop();
+  await done;
+
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  fill.style.width = '100%';
+  status.textContent = 'Done — ' + (blob.size / 1048576).toFixed(1) + ' MB';
+  const a = document.createElement('a');
+  a.href = url; a.download = 'v13-background.webm';
+  a.className = 'dl'; a.textContent = 'Download v13-background.webm';
+  document.getElementById('out').appendChild(a);
+  a.click();
+  window.__renderDone = true;
+})();
+</script>
+</body>
+</html>

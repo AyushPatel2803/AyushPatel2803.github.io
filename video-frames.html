@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Video frame sheet</title>
+<style>
+  body { background: #0a0a12; color: #fff; font-family: Inter, system-ui, sans-serif; padding: 16px; margin: 0; }
+  h1 { font-size: 14px; margin-bottom: 12px; color: rgba(255,255,255,.7); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { position: relative; border-radius: 8px; overflow: hidden; background: #000; }
+  .tile video { width: 100%; display: block; }
+  .t { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.25);
+    padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1 id="title">frames</h1>
+  <div class="grid" id="grid"></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const src = q.get('src') || '/cliff-take1.mp4';
+  const n = Math.min(24, Math.max(4, parseInt(q.get('n') || '6', 10)));
+  document.getElementById('title').textContent = src + ' — frames across the timeline';
+  const grid = document.getElementById('grid');
+  const probe = document.createElement('video');
+  probe.muted = true; probe.preload = 'metadata'; probe.src = src;
+  probe.onloadedmetadata = () => {
+    const d = probe.duration;
+    const times = Array.from({length: n}, (_, i) => +((0.02 + (i / (n - 1)) * 0.96) * d).toFixed(2));
+    times.forEach(t => {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      const v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.src = src;
+      v.onloadedmetadata = () => { v.currentTime = t; };
+      const badge = document.createElement('div');
+      badge.className = 't'; badge.textContent = t + 's';
+      tile.appendChild(v); tile.appendChild(badge);
+      grid.appendChild(tile);
+    });
+  };
+</script>
+</body>
+</html>

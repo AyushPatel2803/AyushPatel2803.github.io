@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demo B – Velorix IIC Style</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#04020e;font-family:system-ui,-apple-system,sans-serif}
+canvas{position:fixed;inset:0;display:block}
+.badge{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);padding:5px 20px;border-radius:20px;font:11px/1.6 monospace;z-index:10;white-space:nowrap;letter-spacing:.05em}
+.hero{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:5;text-align:center;padding:0 20px}
+h1{font-size:clamp(3rem,10vw,9rem);font-weight:900;color:#fff;line-height:1;letter-spacing:-.03em}
+.sub{color:rgba(255,255,255,.35);margin-top:16px;font-size:1.05rem;letter-spacing:.18em;text-transform:uppercase}
+.nav{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;gap:32px;padding:20px;z-index:6;color:rgba(255,255,255,.3);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="badge">Demo B — Velorix IIC Style · Crystalline Shard Cluster</div>
+<nav class="nav">
+  <span>Home</span><span>About</span><span>Skills</span><span>Projects</span><span>Contact</span>
+</nav>
+<div class="hero">
+  <h1>Ayush Patel</h1>
+  <p class="sub">Software Engineer</p>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0, 7.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x04020e);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+Object.assign(renderer.domElement.style, {
+  position:'fixed', inset:'0', zIndex:'0', width:'100%', height:'100%'
+});
+
+// Lighting — violet/blue/pink to match Ayush's palette
+const ambient = new THREE.AmbientLight(0x0d0520, 2);
+scene.add(ambient);
+
+const ptCenter = new THREE.PointLight(0x7c3aed, 25, 14); // violet core
+ptCenter.position.set(0, 0, 3);
+scene.add(ptCenter);
+
+const ptBlue = new THREE.PointLight(0x3b82f6, 8, 12); // electric blue
+ptBlue.position.set(3, 2, 2);
+scene.add(ptBlue);
+
+const ptPink = new THREE.PointLight(0xf472b6, 5, 10); // pink accent
+ptPink.position.set(-3, -2, 1);
+scene.add(ptPink);
+
+const ptTop = new THREE.PointLight(0xa78bfa, 6, 10); // violet-lavender
+ptTop.position.set(0, 3, 1);
+scene.add(ptTop);
+
+// Shard geometry — elongated octahedron (OctahedronGeometry scaled)
+function shardGeo(detail = 0) {
+  return new THREE.OctahedronGeometry(1, detail);
+}
+
+// Outer shard material
+const matOuter = new THREE.MeshPhongMaterial({
+  color: 0x1a0840,
+  emissive: 0x4c1d95,
+  emissiveIntensity: 0.7,
+  specular: 0xc4b5fd,
+  shininess: 180,
+  transparent: true,
+  opacity: 0.88,
+  side: THREE.DoubleSide,
+});
+
+// Inner shard material — brighter
+const matInner = new THREE.MeshPhongMaterial({
+  color: 0x2e1065,
+  emissive: 0x7c3aed,
+  emissiveIntensity: 1.1,
+  specular: 0xffffff,
+  shininess: 300,
+  transparent: true,
+  opacity: 0.82,
+  side: THREE.DoubleSide,
+});
+
+// Tiny accent material
+const matAccent = new THREE.MeshPhongMaterial({
+  color: 0x1e1b4b,
+  emissive: 0x60a5fa,
+  emissiveIntensity: 0.8,
+  specular: 0xffffff,
+  shininess: 220,
+  transparent: true,
+  opacity: 0.75,
+  side: THREE.DoubleSide,
+});
+
+const group = new THREE.Group();
+// Position cluster lower-center like Velorix
+group.position.set(0, -0.6, 0);
+scene.add(group);
+
+// ── Outer ring: 6 long crystal spikes radiating outward ──
+const OUTER_COUNT = 6;
+for (let i = 0; i < OUTER_COUNT; i++) {
+  const angle = (i / OUTER_COUNT) * Math.PI * 2;
+  const mesh = new THREE.Mesh(shardGeo(), matOuter.clone());
+
+  // Scale into a long spike
+  mesh.scale.set(0.18, 1.7, 0.22);
+
+  // Position outward from center
+  const r = 0.95;
+  mesh.position.set(Math.cos(angle) * r, Math.sin(angle) * r, 0);
+
+  // Rotate to point outward (along the radius)
+  mesh.rotation.z = angle + Math.PI / 2;
+  // Tilt slightly toward viewer
+  mesh.rotation.x = 0.25 + (i % 2) * 0.15;
+  mesh.rotation.y = (i % 3) * 0.1;
+
+  group.add(mesh);
+}
+
+// ── Middle ring: 6 shorter shards offset by 30° ──
+const MID_COUNT = 6;
+for (let i = 0; i < MID_COUNT; i++) {
+  const angle = (i / MID_COUNT) * Math.PI * 2 + Math.PI / 6;
+  const mesh = new THREE.Mesh(shardGeo(), matInner.clone());
+
+  mesh.scale.set(0.13, 1.05, 0.16);
+
+  const r = 0.52;
+  mesh.position.set(Math.cos(angle) * r, Math.sin(angle) * r, 0.12);
+
+  mesh.rotation.z = angle + Math.PI / 2;
+  mesh.rotation.x = -0.3 + (i % 2) * 0.2;
+
+  group.add(mesh);
+}
+
+// ── Innermost: 3 tiny spikes close to center ──
+for (let i = 0; i < 3; i++) {
+  const angle = (i / 3) * Math.PI * 2 + Math.PI / 4;
+  const mesh = new THREE.Mesh(shardGeo(), matInner.clone());
+  mesh.scale.set(0.09, 0.6, 0.11);
+  const r = 0.22;
+  mesh.position.set(Math.cos(angle) * r, Math.sin(angle) * r, 0.25);
+  mesh.rotation.z = angle + Math.PI / 2;
+  group.add(mesh);
+}
+
+// ── Center glow orb ──
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0xa78bfa })
+);
+group.add(core);
+
+// ── Scattered debris: small angular pieces floating around ──
+const DEBRIS = 12;
+for (let i = 0; i < DEBRIS; i++) {
+  const angle = (i / DEBRIS) * Math.PI * 2 + Math.random() * 0.4;
+  const r = 1.4 + Math.random() * 0.9;
+  const mesh = new THREE.Mesh(shardGeo(), matAccent.clone());
+
+  const s = 0.06 + Math.random() * 0.07;
+  mesh.scale.set(s * 0.5, s * 2.2, s * 0.6);
+
+  mesh.position.set(
+    Math.cos(angle) * r,
+    Math.sin(angle) * r,
+    (Math.random() - 0.5) * 1.2
+  );
+  mesh.rotation.set(
+    Math.random() * Math.PI * 2,
+    Math.random() * Math.PI * 2,
+    Math.random() * Math.PI * 2
+  );
+
+  group.add(mesh);
+}
+
+// Mouse parallax
+let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+document.addEventListener('mousemove', e => {
+  targetX = (e.clientX / innerWidth - 0.5) * 2;
+  targetY = -(e.clientY / innerHeight - 0.5) * 2;
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const t0 = performance.now();
+(function frame() {
+  const t = (performance.now() - t0) / 1000;
+
+  // Smooth mouse follow
+  currentX += (targetX - currentX) * 0.05;
+  currentY += (targetY - currentY) * 0.05;
+
+  // Slow rotation + mouse parallax
+  group.rotation.z = t * 0.07;
+  group.rotation.y = currentX * 0.18;
+  group.rotation.x = currentY * 0.12;
+
+  // Pulse the center light
+  ptCenter.intensity = 22 + Math.sin(t * 1.8) * 6;
+  core.material.color.setHSL(0.76 + Math.sin(t * 0.5) * 0.04, 0.8, 0.7);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

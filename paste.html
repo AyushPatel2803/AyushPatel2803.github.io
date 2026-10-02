@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>paste scratchpad</title></head>
+<body style="margin:0">
+<textarea id="t" autofocus style="width:100vw;height:60vh;font:13px monospace"></textarea>
+<pre id="out" style="white-space:pre-wrap;font:12px monospace;padding:8px;border-top:2px solid #888"></pre>
+<script>
+const t=document.getElementById('t'), out=document.getElementById('out');
+t.addEventListener('input',()=>{ out.textContent = t.value; });
+</script>
+</body></html>
